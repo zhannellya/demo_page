@@ -30,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -100,7 +99,7 @@ fun AdoptMeNavHost() {
                             selected = selected,
                             onClick = {
                                 navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
+                                    popUpTo(Route.Home.path) {
                                         saveState = true
                                     }
                                     launchSingleTop = true
@@ -165,7 +164,8 @@ fun AdoptMeNavHost() {
                 LoginScreen(
                     onLoggedIn = {
                         navController.navigate(Route.Home.path) {
-                            popUpTo(navController.graph.id) { inclusive = true }
+                            popUpTo(Route.Login.path) { inclusive = true }
+                            launchSingleTop = true
                         }
                     },
                     onRegister = { navController.navigate(Route.Register.path) }
@@ -175,7 +175,8 @@ fun AdoptMeNavHost() {
                 RegisterScreen(
                     onRegistered = {
                         navController.navigate(Route.Home.path) {
-                            popUpTo(navController.graph.id) { inclusive = true }
+                            popUpTo(Route.Login.path) { inclusive = true }
+                            launchSingleTop = true
                         }
                     },
                     onLogin = { navController.popBackStack() }
@@ -209,7 +210,8 @@ fun AdoptMeNavHost() {
                 ProfileScreen(
                     onLogout = {
                         navController.navigate(Route.Login.path) {
-                            popUpTo(navController.graph.id) { inclusive = true }
+                            popUpTo(Route.Home.path) { inclusive = true }
+                            launchSingleTop = true
                         }
                     },
                     onApplications = { navController.navigate(Route.Applications.path) },

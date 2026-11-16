@@ -110,7 +110,10 @@ fun AdoptionScreen(
                     GradientButton(
                         text = "Отправить заявку",
                         onClick = vm::submit,
-                        enabled = !form.loading && form.submittedNumber == null && !form.unavailable,
+                        enabled = !form.loading &&
+                            form.submittedNumber == null &&
+                            !form.unavailable &&
+                            form.animalName.isNotBlank(),
                         loading = form.loading
                     )
                     if (form.unavailable) {

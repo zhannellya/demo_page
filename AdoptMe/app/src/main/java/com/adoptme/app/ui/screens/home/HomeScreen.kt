@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
@@ -62,89 +63,92 @@ fun HomeScreen(
     val greeting = state.userName.ifBlank { "друг" }
 
     SoftBackground {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text("Привет, $greeting", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text("Кого хотите забрать домой?", color = TextSecondary)
-                Spacer(Modifier.height(10.dp))
-                DemoBanner()
-                Spacer(Modifier.height(10.dp))
-                SearchBar(query = state.query.name, onQueryChange = vm::setName)
-                Spacer(Modifier.height(8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CategoryChip("Все", state.query.species == null) { vm.setSpecies(null) }
-                    Species.entries.forEach { species ->
-                        CategoryChip(species.label(), state.query.species == species) {
-                            vm.setSpecies(if (state.query.species == species) null else species)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val cell = if (maxWidth > 700.dp) 220.dp else 160.dp
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(cell),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text("Привет, $greeting", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Text("Кого хотите забрать домой?", color = TextSecondary)
+                        Spacer(Modifier.height(10.dp))
+                        DemoBanner()
+                        Spacer(Modifier.height(10.dp))
+                        SearchBar(query = state.query.name, onQueryChange = vm::setName)
+                        Spacer(Modifier.height(8.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CategoryChip("Все", state.query.species == null) { vm.setSpecies(null) }
+                            Species.entries.forEach { species ->
+                                CategoryChip(species.label(), state.query.species == species) {
+                                    vm.setSpecies(if (state.query.species == species) null else species)
+                                }
+                            }
+                        }
+                        Row(Modifier.horizontalScroll(rememberScrollState())) {
+                            TextButton(onClick = { filtersOpen = !filtersOpen }) {
+                                Text(if (filtersOpen) "Скрыть фильтры" else "Фильтры", color = PurplePrimary)
+                            }
+                            TextButton(onClick = onApplications) { Text("Мои заявки", color = PurplePrimary) }
+                            TextButton(onClick = onNews) { Text("Новости", color = PurplePrimary) }
+                            TextButton(onClick = onHelp) { Text("Помощь", color = PurplePrimary) }
+                        }
+                        if (filtersOpen) {
+                            Text("Возраст", style = MaterialTheme.typography.titleSmall, color = TextSecondary)
+                            ChipRow {
+                                AgeGroup.entries.forEach { group ->
+                                    CategoryChip(group.label(), state.query.ageGroup == group) {
+                                        vm.setAge(if (state.query.ageGroup == group) null else group)
+                                    }
+                                }
+                            }
+                            Text("Размер", style = MaterialTheme.typography.titleSmall, color = TextSecondary)
+                            ChipRow {
+                                PetSize.entries.forEach { size ->
+                                    CategoryChip(size.label(), state.query.size == size) {
+                                        vm.setSize(if (state.query.size == size) null else size)
+                                    }
+                                }
+                            }
+                            Text("Пол", style = MaterialTheme.typography.titleSmall, color = TextSecondary)
+                            ChipRow {
+                                Gender.entries.forEach { gender ->
+                                    CategoryChip(gender.label(), state.query.gender == gender) {
+                                        vm.setGender(if (state.query.gender == gender) null else gender)
+                                    }
+                                }
+                            }
+                            Text("Город", style = MaterialTheme.typography.titleSmall, color = TextSecondary)
+                            ChipRow {
+                                state.cities.forEach { city ->
+                                    CategoryChip(city, state.query.city == city) {
+                                        vm.setCity(if (state.query.city == city) null else city)
+                                    }
+                                }
+                            }
+                            TextButton(onClick = vm::clearFilters) { Text("Сбросить фильтры", color = PurplePrimary) }
                         }
                     }
                 }
-                Row(Modifier.horizontalScroll(rememberScrollState())) {
-                    TextButton(onClick = { filtersOpen = !filtersOpen }) {
-                        Text(if (filtersOpen) "Скрыть фильтры" else "Фильтры", color = PurplePrimary)
+                if (state.animals.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        EmptyState(
+                            title = "Никого не нашли",
+                            subtitle = "Измените кличку или снимите часть фильтров."
+                        )
                     }
-                    TextButton(onClick = onApplications) { Text("Мои заявки", color = PurplePrimary) }
-                    TextButton(onClick = onNews) { Text("Новости", color = PurplePrimary) }
-                    TextButton(onClick = onHelp) { Text("Помощь", color = PurplePrimary) }
-                }
-                if (filtersOpen) {
-                    Text("Возраст", style = MaterialTheme.typography.labelLarge, color = TextSecondary)
-                    ChipRow {
-                        AgeGroup.entries.forEach { group ->
-                            CategoryChip(group.label(), state.query.ageGroup == group) {
-                                vm.setAge(if (state.query.ageGroup == group) null else group)
-                            }
-                        }
-                    }
-                    Text("Размер", style = MaterialTheme.typography.labelLarge, color = TextSecondary)
-                    ChipRow {
-                        PetSize.entries.forEach { size ->
-                            CategoryChip(size.label(), state.query.size == size) {
-                                vm.setSize(if (state.query.size == size) null else size)
-                            }
-                        }
-                    }
-                    Text("Пол", style = MaterialTheme.typography.labelLarge, color = TextSecondary)
-                    ChipRow {
-                        Gender.entries.forEach { gender ->
-                            CategoryChip(gender.label(), state.query.gender == gender) {
-                                vm.setGender(if (state.query.gender == gender) null else gender)
-                            }
-                        }
-                    }
-                    Text("Город", style = MaterialTheme.typography.labelLarge, color = TextSecondary)
-                    ChipRow {
-                        state.cities.forEach { city ->
-                            CategoryChip(city, state.query.city == city) {
-                                vm.setCity(if (state.query.city == city) null else city)
-                            }
-                        }
-                    }
-                    TextButton(onClick = vm::clearFilters) { Text("Сбросить фильтры", color = PurplePrimary) }
-                }
-            }
-            if (state.animals.isEmpty()) {
-                EmptyState(
-                    title = "Никого не нашли",
-                    subtitle = "Измените кличку или снимите часть фильтров."
-                )
-            } else {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val cell = if (maxWidth > 700.dp) 220.dp else 160.dp
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(cell),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(state.animals, key = { it.id }) { animal ->
-                            AnimalCard(
-                                animal = animal,
-                                onClick = { onOpenAnimal(animal.id) },
-                                onFavorite = { vm.toggleFavorite(animal.id) }
-                            )
-                        }
+                } else {
+                    items(state.animals, key = { it.id }) { animal ->
+                        AnimalCard(
+                            animal = animal,
+                            onClick = { onOpenAnimal(animal.id) },
+                            onFavorite = { vm.toggleFavorite(animal.id) },
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
                     }
                 }
             }

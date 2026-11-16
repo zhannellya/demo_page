@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -410,25 +412,23 @@ class AnimalEditorViewModel(
     init {
         if (animalId != "new") {
             viewModelScope.launch {
-                container.catalogRepository.observeAnimal(animalId).collect { animal ->
-                    if (animal == null || _state.value.saved) return@collect
-                    _state.value = AnimalEditorState(
-                        id = animal.id,
-                        name = animal.name,
-                        species = animal.species,
-                        breed = animal.breed,
-                        ageMonths = animal.ageMonths.toString(),
-                        ageLabel = animal.ageLabel,
-                        gender = animal.gender,
-                        size = animal.size,
-                        temperament = animal.temperament,
-                        story = animal.story,
-                        shelterId = animal.shelterId,
-                        city = animal.city,
-                        imageKey = animal.imageKey,
-                        status = animal.status
-                    )
-                }
+                val animal = container.catalogRepository.observeAnimal(animalId).filterNotNull().first()
+                _state.value = AnimalEditorState(
+                    id = animal.id,
+                    name = animal.name,
+                    species = animal.species,
+                    breed = animal.breed,
+                    ageMonths = animal.ageMonths.toString(),
+                    ageLabel = animal.ageLabel,
+                    gender = animal.gender,
+                    size = animal.size,
+                    temperament = animal.temperament,
+                    story = animal.story,
+                    shelterId = animal.shelterId,
+                    city = animal.city,
+                    imageKey = animal.imageKey,
+                    status = animal.status
+                )
             }
         }
     }
@@ -449,8 +449,8 @@ class AnimalEditorViewModel(
             shelter == null -> "Выберите приют."
             else -> null
         }
-        if (error != null) {
-            _state.update { it.copy(error = error) }
+        if (error != null || months == null || shelter == null) {
+            _state.update { it.copy(error = error ?: "Проверьте поля анкеты.") }
             return@launch
         }
         val animal = Animal(
@@ -458,14 +458,14 @@ class AnimalEditorViewModel(
             name = form.name.trim(),
             species = form.species,
             breed = form.breed.trim(),
-            ageMonths = months!!,
+            ageMonths = months,
             ageLabel = form.ageLabel.trim(),
             ageGroup = ageGroupOf(months),
             gender = form.gender,
             size = form.size,
             temperament = form.temperament.trim(),
             story = form.story.trim(),
-            shelterId = shelter!!.id,
+            shelterId = shelter.id,
             shelterName = shelter.name,
             city = shelter.city,
             imageKey = form.imageKey.ifBlank { "animal_placeholder" },

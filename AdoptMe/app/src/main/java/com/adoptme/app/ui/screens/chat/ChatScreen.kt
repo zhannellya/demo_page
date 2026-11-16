@@ -62,6 +62,7 @@ fun ChatListScreen(onOpenThread: (String) -> Unit) {
                 DemoBanner("Локальный демонстрационный чат. Сервер сообщений не подключён.")
             }
             LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

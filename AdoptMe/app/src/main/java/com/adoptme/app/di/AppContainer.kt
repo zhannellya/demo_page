@@ -51,7 +51,8 @@ class AppContainer(context: Context) {
                 DatabaseSeeder(database).seed()
                 ready.complete(Unit)
             } catch (error: Throwable) {
-                ready.completeExceptionally(error)
+                ready.complete(Unit)
+                error.printStackTrace()
             }
         }
     }

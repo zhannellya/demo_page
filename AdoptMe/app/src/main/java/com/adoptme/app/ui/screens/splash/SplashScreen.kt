@@ -48,8 +48,12 @@ fun SplashScreen(
     LaunchedEffect(Unit) {
         scale.animateTo(1f, tween(700, easing = EaseOutBack))
         alpha.animateTo(1f, tween(500))
-        container.awaitReady()
-        val session = container.sessionStore.snapshot()
+        val session = try {
+            container.awaitReady()
+            container.sessionStore.snapshot()
+        } catch (_: Throwable) {
+            container.sessionStore.snapshot()
+        }
         delay(500)
         onFinished(session.onboardingDone, session.loggedIn)
     }

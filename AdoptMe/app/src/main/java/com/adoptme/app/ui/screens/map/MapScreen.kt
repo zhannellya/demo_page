@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,40 +57,43 @@ fun ShelterSearchScreen(onOpenShelter: (String) -> Unit) {
     val state by vm.ui.collectAsState()
 
     SoftBackground {
-        Column(Modifier.fillMaxSize()) {
-            ScreenHeader("Приюты")
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                SearchBar(
-                    query = state.query,
-                    onQueryChange = vm::setQuery,
-                    placeholder = "Название или город"
-                )
-                Spacer(Modifier.height(8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CategoryChip("Все города", state.city == null) { vm.setCity(null) }
-                    state.cities.forEach { city ->
-                        CategoryChip(city, state.city == city) {
-                            vm.setCity(if (state.city == city) null else city)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    ScreenHeader("Приюты")
+                    SearchBar(
+                        query = state.query,
+                        onQueryChange = vm::setQuery,
+                        placeholder = "Название или город"
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CategoryChip("Все города", state.city == null) { vm.setCity(null) }
+                        state.cities.forEach { city ->
+                            CategoryChip(city, state.city == city) {
+                                vm.setCity(if (state.city == city) null else city)
+                            }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
+                    ShelterMap(state.shelters)
                 }
-                Spacer(Modifier.height(8.dp))
-                ShelterMap(state.shelters)
-                Spacer(Modifier.height(8.dp))
             }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(state.shelters, key = { it.id }) { shelter ->
-                    AdoptMeCard(modifier = Modifier.clickable { onOpenShelter(shelter.id) }) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(shelter.name, style = MaterialTheme.typography.titleLarge)
-                            Text(shelter.city, color = TextSecondary, fontWeight = FontWeight.SemiBold)
-                            Text(shelter.hours, color = TextSecondary)
-                            Text(shelter.description, color = TextSecondary, maxLines = 3)
-                        }
+            items(state.shelters, key = { it.id }) { shelter ->
+                AdoptMeCard(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .clickable { onOpenShelter(shelter.id) }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(shelter.name, style = MaterialTheme.typography.titleLarge)
+                        Text(shelter.city, color = TextSecondary, fontWeight = FontWeight.SemiBold)
+                        Text(shelter.hours, color = TextSecondary)
+                        Text(shelter.description, color = TextSecondary, maxLines = 3)
                     }
                 }
             }
@@ -144,9 +148,11 @@ fun ShelterDetailScreen(
 @Composable
 private fun ShelterMap(shelters: List<Shelter>) {
     val context = LocalContext.current
-    val mapsReady = BuildConfig.MAPS_API_KEY.isNotBlank() && remember {
-        GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
+    val playServicesReady = remember(context) {
+        GoogleApiAvailability.getInstance()
+            .isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
     }
+    val mapsReady = BuildConfig.MAPS_API_KEY.isNotBlank() && playServicesReady
     val positioned = shelters.mapNotNull { shelter ->
         val lat = shelter.latitude
         val lng = shelter.longitude
@@ -180,11 +186,14 @@ private fun ShelterMap(shelters: List<Shelter>) {
                     cameraPositionState = camera
                 ) {
                     positioned.forEach { (shelter, position) ->
-                        Marker(
-                            state = MarkerState(position = position),
-                            title = shelter.name,
-                            snippet = shelter.city
-                        )
+                        key(shelter.id) {
+                            val markerState = remember(shelter.id) { MarkerState(position = position) }
+                            Marker(
+                                state = markerState,
+                                title = shelter.name,
+                                snippet = shelter.city
+                            )
+                        }
                     }
                 }
             }

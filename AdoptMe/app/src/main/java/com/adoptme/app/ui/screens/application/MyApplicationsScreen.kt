@@ -50,7 +50,7 @@ fun MyApplicationsScreen(onBack: () -> Unit) {
                 EmptyState("Заявок пока нет", "Выберите животное в каталоге и заполните анкету.")
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {

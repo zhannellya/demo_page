@@ -40,7 +40,7 @@ fun FavoritesScreen(onOpenAnimal: (String) -> Unit, onBrowse: () -> Unit) {
                     onAction = onBrowse
                 )
             } else {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
+                BoxWithConstraints(Modifier.weight(1f).fillMaxSize()) {
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(if (maxWidth > 700.dp) 220.dp else 160.dp),
                         contentPadding = PaddingValues(16.dp),
