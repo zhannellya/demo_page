@@ -1,27 +1,59 @@
 package com.adoptme.app.data.model
 
-enum class AnimalType { CAT, DOG, OTHER }
+enum class Species { CAT, DOG, OTHER }
+
 enum class Gender { MALE, FEMALE }
-enum class HealthStatus { HEALTHY, NEEDS_CARE, RECOVERING }
-enum class ApplicationStatus { PENDING, UNDER_REVIEW, APPROVED, REJECTED }
-enum class LostFoundType { LOST, FOUND }
+
+enum class PetSize { SMALL, MEDIUM, LARGE }
+
+enum class AgeGroup { BABY, YOUNG, ADULT, SENIOR }
+
+enum class AnimalStatus { AVAILABLE, RESERVED, ADOPTED }
+
+enum class ApplicationStatus { PENDING, APPROVED, REJECTED, CANCELLED }
+
+enum class UserRole { USER, LOCAL_ADMIN }
+
+enum class MessageSender { USER, SHELTER }
+
+fun ageGroupOf(ageMonths: Int): AgeGroup = when {
+    ageMonths < 12 -> AgeGroup.BABY
+    ageMonths < 36 -> AgeGroup.YOUNG
+    ageMonths < 84 -> AgeGroup.ADULT
+    else -> AgeGroup.SENIOR
+}
 
 data class Animal(
     val id: String,
     val name: String,
-    val type: AnimalType,
+    val species: Species,
     val breed: String,
-    val age: String,
+    val ageMonths: Int,
+    val ageLabel: String,
+    val ageGroup: AgeGroup,
     val gender: Gender,
-    val healthStatus: HealthStatus,
-    val description: String,
-    val imageUrl: String,
-    val location: String,
-    val size: String,
-    val vaccinated: Boolean = true,
-    val sterilized: Boolean = true,
-    val goodWithKids: Boolean = true,
+    val size: PetSize,
+    val temperament: String,
+    val story: String,
+    val shelterId: String,
+    val shelterName: String,
+    val city: String,
+    val imageKey: String,
+    val status: AnimalStatus,
     val isFavorite: Boolean = false
+)
+
+data class Shelter(
+    val id: String,
+    val name: String,
+    val city: String,
+    val description: String,
+    val phone: String,
+    val email: String,
+    val hours: String,
+    val addressNote: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class UserProfile(
@@ -30,75 +62,68 @@ data class UserProfile(
     val email: String = "",
     val phone: String = "",
     val city: String = "",
-    val avatarUrl: String = ""
+    val role: UserRole = UserRole.USER
 )
 
 data class AdoptionApplication(
     val id: String,
+    val number: String,
+    val userId: String,
     val animalId: String,
     val animalName: String,
     val applicantName: String,
     val email: String,
     val phone: String,
     val address: String,
-    val housingType: String,
-    val hasOtherPets: Boolean,
     val experience: String,
     val reason: String,
-    val status: ApplicationStatus = ApplicationStatus.PENDING,
-    val submittedAt: Long = System.currentTimeMillis()
+    val status: ApplicationStatus,
+    val submittedAt: Long
 )
 
-data class LostFoundPost(
-    val id: String,
-    val type: LostFoundType,
+data class ApplicationDraft(
+    val userId: String,
+    val animalId: String,
     val animalName: String,
-    val species: String,
-    val description: String,
-    val location: String,
-    val contact: String,
-    val imageUrl: String,
-    val date: String
-)
-
-data class Shelter(
-    val id: String,
-    val name: String,
-    val address: String,
+    val animalStatus: AnimalStatus,
+    val applicantName: String,
+    val email: String,
     val phone: String,
-    val latitude: Double,
-    val longitude: Double,
-    val openHours: String
-)
-
-data class Clinic(
-    val id: String,
-    val name: String,
     val address: String,
-    val phone: String,
-    val specialties: String,
-    val rating: Float
+    val experience: String,
+    val reason: String
 )
 
-data class DonationOption(
+data class NewsArticle(
     val id: String,
     val title: String,
-    val description: String,
-    val amountLabel: String,
-    val icon: String
+    val category: String,
+    val summary: String,
+    val body: String,
+    val publishedAt: Long
 )
 
-data class AppNotification(
+data class ChatThread(
     val id: String,
+    val userId: String,
     val title: String,
-    val message: String,
-    val time: String,
-    val isRead: Boolean = false,
-    val relatedApplicationId: String? = null
+    val subtitle: String,
+    val shelterId: String?
 )
 
-data class OnboardingPage(
-    val title: String,
-    val description: String,
-    val imageRes: Int
+data class ChatMessage(
+    val id: String,
+    val threadId: String,
+    val sender: MessageSender,
+    val text: String,
+    val sentAt: Long
+)
+
+data class AnimalQuery(
+    val name: String = "",
+    val species: Species? = null,
+    val ageGroup: AgeGroup? = null,
+    val size: PetSize? = null,
+    val gender: Gender? = null,
+    val city: String? = null
 )

@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.Image
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +57,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -63,8 +66,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.adoptme.app.R
 import com.adoptme.app.data.model.Animal
-import com.adoptme.app.data.model.HealthStatus
+import com.adoptme.app.data.model.AnimalStatus
 import com.adoptme.app.ui.theme.ButtonShape
 import com.adoptme.app.ui.theme.CardShape
 import com.adoptme.app.ui.theme.ChipShape
@@ -185,7 +189,7 @@ fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search pets, breed, shelter…"
+    placeholder: String = "Поиск по кличке"
 ) {
     OutlinedTextField(
         value = query,
@@ -262,8 +266,8 @@ fun PageIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modifie
 fun CategoryChip(
     label: String,
     selected: Boolean,
-    onClick: () -> Unit,
-    accent: Color = PurplePrimary
+    accent: Color = PurplePrimary,
+    onClick: () -> Unit
 ) {
     val bg = if (selected) accent else White
     val fg = if (selected) White else TextSecondary
@@ -281,11 +285,11 @@ fun CategoryChip(
 }
 
 @Composable
-fun HealthBadge(status: HealthStatus) {
+fun StatusBadge(status: AnimalStatus) {
     val (label, color) = when (status) {
-        HealthStatus.HEALTHY -> "Healthy" to SuccessGreen
-        HealthStatus.RECOVERING -> "Recovering" to WarningAmber
-        HealthStatus.NEEDS_CARE -> "Needs care" to ErrorRose
+        AnimalStatus.AVAILABLE -> "Ищет дом" to SuccessGreen
+        AnimalStatus.RESERVED -> "Забронирован" to WarningAmber
+        AnimalStatus.ADOPTED -> "Уже дома" to TextMuted
     }
     Box(
         Modifier
@@ -295,6 +299,49 @@ fun HealthBadge(status: HealthStatus) {
     ) {
         Text(label, color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
     }
+}
+
+@Composable
+fun AnimalArtwork(
+    imageKey: String,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val resId = remember(imageKey) {
+        context.resources.getIdentifier(imageKey, "drawable", context.packageName)
+    }
+    if (resId != 0) {
+        Image(
+            painter = painterResource(resId),
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Crop,
+            modifier = modifier.background(LavenderMist)
+        )
+    } else {
+        AsyncImage(
+            model = imageKey.takeIf { it.startsWith("http") },
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Crop,
+            modifier = modifier.background(LavenderMist),
+            error = painterResource(R.drawable.animal_placeholder),
+            placeholder = painterResource(R.drawable.animal_placeholder)
+        )
+    }
+}
+
+@Composable
+fun DemoBanner(text: String = "Демонстрационный режим: данные хранятся только на этом устройстве") {
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(White.copy(alpha = 0.72f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = TextSecondary
+    )
 }
 
 @Composable
@@ -309,15 +356,13 @@ fun AnimalCard(
         AdoptMeCard {
             Column {
                 Box {
-                    AsyncImage(
-                        model = animal.imageUrl,
+                    AnimalArtwork(
+                        imageKey = animal.imageKey,
                         contentDescription = animal.name,
-                        contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(imageHeight)
                             .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                            .background(LavenderMist)
                     )
                     IconButton(
                         onClick = onFavorite,
@@ -329,7 +374,7 @@ fun AnimalCard(
                     ) {
                         Icon(
                             imageVector = if (animal.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
+                            contentDescription = "Избранное",
                             tint = if (animal.isFavorite) PinkNeon else TextMuted
                         )
                     }
@@ -342,11 +387,14 @@ fun AnimalCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = animal.breed + " · " + animal.age,
-                        style = MaterialTheme.typography.bodySmall
+                        text = animal.breed + " · " + animal.ageLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Text(text = animal.city, style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(8.dp))
-                    HealthBadge(status = animal.healthStatus)
+                    StatusBadge(status = animal.status)
                 }
             }
         }
