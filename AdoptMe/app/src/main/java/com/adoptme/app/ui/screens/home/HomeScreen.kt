@@ -1,7 +1,7 @@
 package com.adoptme.app.ui.screens.home
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,13 +11,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,14 +36,15 @@ import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.AdoptMeCard
 import com.adoptme.app.ui.components.AnimalCard
 import com.adoptme.app.ui.components.CategoryChip
+import com.adoptme.app.ui.components.EmptyState
 import com.adoptme.app.ui.components.SearchBar
 import com.adoptme.app.ui.components.SectionTitle
 import com.adoptme.app.ui.components.SoftBackground
-import com.adoptme.app.ui.theme.CyanNeon
+import com.adoptme.app.ui.theme.Blush
+import com.adoptme.app.ui.theme.OnGradient
 import com.adoptme.app.ui.theme.PinkNeon
-import com.adoptme.app.ui.theme.PurplePrimary
-import com.adoptme.app.ui.theme.TextPrimary
-import com.adoptme.app.ui.theme.TextSecondary
+import com.adoptme.app.ui.theme.Plum
+import com.adoptme.app.ui.theme.White
 import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
 import com.adoptme.app.viewmodel.HomeViewModel
 
@@ -60,83 +62,85 @@ fun HomeScreen(
     val state by vm.ui.collectAsState()
 
     SoftBackground {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 100.dp)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Hello, ${state.userName}", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                    Text("Find a friend", style = MaterialTheme.typography.headlineLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Здравствуйте, ${state.userName}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Blush
+                        )
+                        Text(
+                            text = "Найдите друга",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = OnGradient,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    IconButton(onClick = onNotifications) {
+                        Icon(Icons.Outlined.Notifications, contentDescription = "Уведомления", tint = OnGradient)
+                    }
                 }
-                IconButton(onClick = onNotifications) {
-                    Icon(Icons.Outlined.Notifications, contentDescription = "Notifications", tint = PurplePrimary)
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SearchBar(query = state.query, onQueryChange = vm::setQuery)
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CategoryChip("Все", state.selectedCategory == null) { vm.setCategory(null) }
+                    CategoryChip("Кошки", state.selectedCategory == AnimalType.CAT, PinkNeon) { vm.setCategory(AnimalType.CAT) }
+                    CategoryChip("Собаки", state.selectedCategory == AnimalType.DOG, Plum) { vm.setCategory(AnimalType.DOG) }
                 }
             }
-
-            SearchBar(
-                query = state.query,
-                onQueryChange = vm::setQuery,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-
-            Spacer(Modifier.height(18.dp))
-
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                CategoryChip("All", state.selectedCategory == null, { vm.setCategory(null) })
-                CategoryChip("Cats", state.selectedCategory == AnimalType.CAT, { vm.setCategory(AnimalType.CAT) }, PinkNeon)
-                CategoryChip("Dogs", state.selectedCategory == AnimalType.DOG, { vm.setCategory(AnimalType.DOG) }, CyanNeon)
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionTitle("Быстрые действия", horizontalPadding = 0.dp)
             }
-
-            Spacer(Modifier.height(8.dp))
-            SectionTitle("Quick actions")
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                QuickActionCard("Lost & Found", "Report or find pets", Modifier.weight(1f), onLostFound)
-                QuickActionCard("Help & Donate", "Support shelters", Modifier.weight(1f), onHelp)
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    QuickActionCard("Потеряшки", "Объявления рядом", Modifier.weight(1f), onLostFound)
+                    QuickActionCard("Помощь", "Корм и лечение", Modifier.weight(1f), onHelp)
+                }
             }
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                QuickActionCard("Veterinary", "Clinics & care tips", Modifier.weight(1f), onVeterinary)
-                QuickActionCard("Browse all", "Cats & dogs", Modifier.weight(1f), onSeeAll)
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    QuickActionCard("Ветеринар", "Клиники и советы", Modifier.weight(1f), onVeterinary)
+                    QuickActionCard("Поиск", "Фильтры и породы", Modifier.weight(1f), onSeeAll)
+                }
             }
-
-            SectionTitle("Recommended", "See all", onSeeAll)
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                items(state.animals, key = { it.id }) { animal ->
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionTitle("Животные", "Все", onSeeAll, horizontalPadding = 0.dp)
+            }
+            when {
+                state.loading -> item(span = { GridItemSpan(maxLineSpan) }) {
+                    CircularProgressIndicator(color = White, modifier = Modifier.padding(24.dp))
+                }
+                state.animals.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
+                    EmptyState("Никого не нашли", "Измените запрос или откройте поиск.")
+                }
+                else -> items(state.animals, key = { it.id }) { animal ->
                     AnimalCard(
                         animal = animal,
                         onClick = { onOpenAnimal(animal.id) },
                         onFavorite = { vm.toggleFavorite(animal.id) },
-                        modifier = Modifier.width(220.dp)
+                        imageHeight = 130.dp
                     )
                 }
             }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -150,9 +154,9 @@ private fun QuickActionCard(
 ) {
     AdoptMeCard(modifier = modifier.clickable(onClick = onClick)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = PurplePrimary)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Plum)
             Spacer(Modifier.height(4.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Plum.copy(alpha = 0.75f))
         }
     }
 }

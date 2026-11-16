@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -33,24 +34,25 @@ import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.AdoptTextField
 import com.adoptme.app.ui.components.GradientButton
 import com.adoptme.app.ui.components.SoftBackground
+import com.adoptme.app.ui.theme.Blush
 import com.adoptme.app.ui.theme.ErrorRose
 import com.adoptme.app.ui.theme.LilacCard
-import com.adoptme.app.ui.theme.PurplePrimary
-import com.adoptme.app.ui.theme.TextSecondary
+import com.adoptme.app.ui.theme.OnGradient
+import com.adoptme.app.ui.theme.Plum
 import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
 import com.adoptme.app.viewmodel.AuthViewModel
 
 @Composable
-fun SignUpScreen(
-    onSignedUp: () -> Unit,
+fun RegisterScreen(
+    onRegistered: () -> Unit,
     onGoLogin: () -> Unit
 ) {
     val container = LocalAppContainer.current
-    val vm: AuthViewModel = viewModel(key = "signup", factory = AdoptMeViewModelFactory(container))
+    val vm: AuthViewModel = viewModel(key = "register", factory = AdoptMeViewModelFactory(container))
     val state by vm.ui.collectAsState()
 
     LaunchedEffect(state.success) {
-        if (state.success) onSignedUp()
+        if (state.success) onRegistered()
     }
 
     SoftBackground {
@@ -62,30 +64,22 @@ fun SignUpScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Create account",
+                text = "Регистрация",
                 style = MaterialTheme.typography.headlineLarge,
-                color = PurplePrimary
+                color = OnGradient
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Join AdoptMe and meet your new best friend.",
+                text = "Создайте аккаунт и знакомьтесь с животными из приютов. Пароль хранится только в виде хеша.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary
+                color = Blush
             )
             Spacer(modifier = Modifier.height(24.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(10.dp, RoundedCornerShape(28.dp))
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(LilacCard)
-                    .padding(20.dp)
-            ) {
+            AuthCard {
                 AdoptTextField(
                     value = state.name,
                     onValueChange = { vm.update { s -> s.copy(name = it, error = null) } },
-                    label = "Full name",
+                    label = "Имя",
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -93,26 +87,27 @@ fun SignUpScreen(
                     value = state.email,
                     onValueChange = { vm.update { s -> s.copy(email = it, error = null) } },
                     label = "Email",
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Next
-                    )
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 AdoptTextField(
                     value = state.phone,
                     onValueChange = { vm.update { s -> s.copy(phone = it, error = null) } },
-                    label = "Phone",
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Next
-                    )
+                    label = "Телефон",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                AdoptTextField(
+                    value = state.city,
+                    onValueChange = { vm.update { s -> s.copy(city = it, error = null) } },
+                    label = "Город",
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 AdoptTextField(
                     value = state.password,
                     onValueChange = { vm.update { s -> s.copy(password = it, error = null) } },
-                    label = "Password",
+                    label = "Пароль",
                     isPassword = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
@@ -120,40 +115,16 @@ fun SignUpScreen(
                 AdoptTextField(
                     value = state.confirmPassword,
                     onValueChange = { vm.update { s -> s.copy(confirmPassword = it, error = null) } },
-                    label = "Confirm password",
+                    label = "Повторите пароль",
                     isPassword = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { vm.signUp() })
                 )
-                state.error?.let { message ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = message,
-                        color = ErrorRose,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                AuthError(state.error)
                 Spacer(modifier = Modifier.height(20.dp))
-                GradientButton(
-                    text = "Sign Up",
-                    onClick = vm::signUp,
-                    loading = state.loading
-                )
+                GradientButton(text = "Создать аккаунт", onClick = vm::signUp, loading = state.loading)
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "Already have an account?", color = TextSecondary)
-                TextButton(onClick = onGoLogin) {
-                    Text(
-                        text = "Log in",
-                        color = PurplePrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            AuthSwitchRow(prompt = "Уже есть аккаунт?", action = "Войти", onClick = onGoLogin)
         }
     }
 }
@@ -161,7 +132,7 @@ fun SignUpScreen(
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,
-    onGoSignUp: () -> Unit
+    onGoRegister: () -> Unit
 ) {
     val container = LocalAppContainer.current
     val vm: AuthViewModel = viewModel(key = "login", factory = AdoptMeViewModelFactory(container))
@@ -180,73 +151,74 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Welcome back",
+                text = "Вход",
                 style = MaterialTheme.typography.headlineLarge,
-                color = PurplePrimary
+                color = OnGradient
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Log in to continue your adoption journey.",
+                text = "Войдите, чтобы открыть избранное и свои заявки.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary
+                color = Blush
             )
             Spacer(modifier = Modifier.height(24.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(10.dp, RoundedCornerShape(28.dp))
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(LilacCard)
-                    .padding(20.dp)
-            ) {
+            AuthCard {
                 AdoptTextField(
                     value = state.email,
                     onValueChange = { vm.update { s -> s.copy(email = it, error = null) } },
                     label = "Email",
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Next
-                    )
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 AdoptTextField(
                     value = state.password,
                     onValueChange = { vm.update { s -> s.copy(password = it, error = null) } },
-                    label = "Password",
+                    label = "Пароль",
                     isPassword = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { vm.login() })
                 )
-                state.error?.let { message ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = message,
-                        color = ErrorRose,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                AuthError(state.error)
                 Spacer(modifier = Modifier.height(20.dp))
-                GradientButton(
-                    text = "Log In",
-                    onClick = vm::login,
-                    loading = state.loading
-                )
+                GradientButton(text = "Войти", onClick = vm::login, loading = state.loading)
             }
+            AuthSwitchRow(prompt = "Нет аккаунта?", action = "Регистрация", onClick = onGoRegister)
+        }
+    }
+}
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "New here?", color = TextSecondary)
-                TextButton(onClick = onGoSignUp) {
-                    Text(
-                        text = "Sign up",
-                        color = PurplePrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+@Composable
+private fun AuthCard(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(10.dp, RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .background(LilacCard)
+            .padding(20.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun AuthError(message: String?) {
+    if (message != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = message, color = ErrorRose, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun AuthSwitchRow(prompt: String, action: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = prompt, color = Plum)
+        TextButton(onClick = onClick) {
+            Text(text = action, color = Plum, fontWeight = FontWeight.Bold)
         }
     }
 }

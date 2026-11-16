@@ -17,8 +17,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,36 +28,33 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.adoptme.app.R
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.SoftBackground
-import com.adoptme.app.ui.theme.PinkNeon
-import com.adoptme.app.ui.theme.PurplePrimary
-import com.adoptme.app.ui.theme.TextSecondary
+import com.adoptme.app.ui.theme.Blush
+import com.adoptme.app.ui.theme.OnGradient
+import com.adoptme.app.ui.theme.Plum
 import com.adoptme.app.ui.theme.White
 import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
 import com.adoptme.app.viewmodel.SplashViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(
-    onFinished: (onboardingDone: Boolean, loggedIn: Boolean) -> Unit
-) {
+fun SplashScreen(onFinished: (loggedIn: Boolean) -> Unit) {
     val container = LocalAppContainer.current
     val vm: SplashViewModel = viewModel(factory = AdoptMeViewModelFactory(container))
-    val onboardingDone by vm.onboardingDone.collectAsState()
-    val loggedIn by vm.loggedIn.collectAsState()
-
     val scale = remember { Animatable(0.6f) }
     val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
-        scale.animateTo(1f, tween(900, easing = EaseOutBack))
-        alpha.animateTo(1f, tween(700))
-        delay(1600)
-        onFinished(onboardingDone, loggedIn)
+        val session = async { vm.awaitLoggedIn() }
+        scale.animateTo(1f, tween(700, easing = EaseOutBack))
+        alpha.animateTo(1f, tween(500))
+        val loggedIn = session.await()
+        delay(500)
+        onFinished(loggedIn)
     }
 
     SoftBackground {
@@ -72,34 +67,32 @@ fun SplashScreen(
                 modifier = Modifier
                     .scale(scale.value)
                     .size(128.dp)
-                    .shadow(20.dp, CircleShape, ambientColor = PurplePrimary.copy(0.4f), spotColor = PinkNeon.copy(0.5f))
+                    .shadow(20.dp, CircleShape, ambientColor = Plum.copy(alpha = 0.45f))
                     .clip(CircleShape)
                     .background(White),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(R.drawable.adoptme_logo),
-                    contentDescription = "AdoptMe",
+                    contentDescription = "ADOPTME",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
             Spacer(Modifier.height(28.dp))
             Text(
-                text = "AdoptMe",
+                text = "ADOPTME",
                 modifier = Modifier.alpha(alpha.value),
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = PurplePrimary
-                )
+                style = MaterialTheme.typography.displayMedium,
+                color = OnGradient,
+                fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Find your forever friend",
+                text = "Приюты животных",
                 modifier = Modifier.alpha(alpha.value),
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary
+                color = Blush
             )
         }
     }

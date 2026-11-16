@@ -1,10 +1,17 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.adoptme.app.data.repository
 
 import com.adoptme.app.data.local.SampleData
 import com.adoptme.app.data.local.SessionStore
+import com.adoptme.app.data.local.db.AnimalDao
+import com.adoptme.app.data.local.db.ApplicationDao
+import com.adoptme.app.data.local.db.ApplicationEntity
+import com.adoptme.app.data.local.db.FavoriteDao
+import com.adoptme.app.data.local.db.FavoriteEntity
+import com.adoptme.app.data.local.db.toDomain
 import com.adoptme.app.data.model.AdoptionApplication
 import com.adoptme.app.data.model.Animal
-import com.adoptme.app.data.model.AnimalType
 import com.adoptme.app.data.model.AppNotification
 import com.adoptme.app.data.model.ApplicationStatus
 import com.adoptme.app.data.model.Clinic
@@ -14,73 +21,117 @@ import com.adoptme.app.data.model.Shelter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 
-class AnimalRepository(private val sessionStore: SessionStore) {
-
-    private val applications = MutableStateFlow(SampleData.sampleApplications)
+class AnimalRepository(
+    private val sessionStore: SessionStore,
+    private val animalDao: AnimalDao,
+    private val favoriteDao: FavoriteDao,
+    private val applicationDao: ApplicationDao
+) {
+    private val seedMutex = Mutex()
     private val notifications = MutableStateFlow(SampleData.notifications)
     private val lostFoundPosts = MutableStateFlow(SampleData.lostFound)
 
-    val favoriteIds: Flow<Set<String>> = sessionStore.favoriteIds
-
-    fun animalsWithFavorites(): Flow<List<Animal>> =
-        favoriteIds.combine(MutableStateFlow(SampleData.animals)) { favs, animals ->
-            animals.map { it.copy(isFavorite = it.id in favs) }
-        }
-
-    fun getAnimal(id: String): Animal? = SampleData.animals.find { it.id == id }
-
-    fun searchAnimals(
-        query: String,
-        type: AnimalType?,
-        favoritesOnly: Boolean,
-        favoriteIds: Set<String>
-    ): List<Animal> {
-        return SampleData.animals
-            .map { it.copy(isFavorite = it.id in favoriteIds) }
-            .filter { animal ->
-                val matchesQuery = query.isBlank() ||
-                    animal.name.contains(query, true) ||
-                    animal.breed.contains(query, true) ||
-                    animal.location.contains(query, true)
-                val matchesType = type == null || animal.type == type
-                val matchesFav = !favoritesOnly || animal.isFavorite
-                matchesQuery && matchesType && matchesFav
+    suspend fun ensureSeeded() {
+        seedMutex.withLock {
+            if (animalDao.count() == 0) {
+                animalDao.insertAll(SampleData.animalEntities)
             }
+        }
     }
 
-    suspend fun toggleFavorite(id: String) = sessionStore.toggleFavorite(id)
+    fun observeAnimals(): Flow<List<Animal>> = sessionStore.userId.flatMapLatest { userId ->
+        flow {
+            ensureSeeded()
+            if (userId == null) {
+                emitAll(animalDao.observeAll().map { list -> list.map { it.toDomain(isFavorite = false) } })
+            } else {
+                emitAll(
+                    combine(animalDao.observeAll(), favoriteDao.observeIds(userId)) { animals, favoriteIds ->
+                        val favorites = favoriteIds.toSet()
+                        animals.map { it.toDomain(isFavorite = it.id in favorites) }
+                    }
+                )
+            }
+        }
+    }
 
-    fun shelters(): List<Shelter> = SampleData.shelters
-    fun clinics(): List<Clinic> = SampleData.clinics
-    fun donations(): List<DonationOption> = SampleData.donations
-    fun lostFound(): Flow<List<LostFoundPost>> = lostFoundPosts
-    fun applications(): Flow<List<AdoptionApplication>> = applications
-    fun notifications(): Flow<List<AppNotification>> = notifications
+    suspend fun toggleFavorite(animalId: String) {
+        val userId = sessionStore.userId.first() ?: return
+        if (favoriteDao.isFavorite(userId, animalId)) {
+            favoriteDao.delete(userId, animalId)
+        } else {
+            favoriteDao.insert(FavoriteEntity(userId = userId, animalId = animalId))
+        }
+    }
 
-    fun submitApplication(application: AdoptionApplication): Result<AdoptionApplication> {
+    fun applications(): Flow<List<AdoptionApplication>> = sessionStore.userId.flatMapLatest { userId ->
+        if (userId == null) {
+            flowOf(emptyList())
+        } else {
+            applicationDao.observeForUser(userId).map { list -> list.map { it.toDomain() } }
+        }
+    }
+
+    suspend fun submitApplication(application: AdoptionApplication): Result<AdoptionApplication> {
+        val userId = sessionStore.userId.first()
+            ?: return Result.failure(IllegalStateException("Войдите в аккаунт, чтобы отправить заявку."))
+        if (applicationDao.pendingCount(userId, application.animalId) > 0) {
+            return Result.failure(IllegalStateException("Заявка на это животное уже отправлена."))
+        }
         val saved = application.copy(
             id = UUID.randomUUID().toString(),
             status = ApplicationStatus.PENDING,
             submittedAt = System.currentTimeMillis()
         )
-        applications.update { listOf(saved) + it }
-        notifications.update {
+        applicationDao.insert(
+            ApplicationEntity(
+                id = saved.id,
+                userId = userId,
+                animalId = saved.animalId,
+                animalName = saved.animalName,
+                applicantName = saved.applicantName,
+                email = saved.email,
+                phone = saved.phone,
+                address = saved.address,
+                housingType = saved.housingType,
+                hasOtherPets = saved.hasOtherPets,
+                experience = saved.experience,
+                reason = saved.reason,
+                status = saved.status.name,
+                submittedAt = saved.submittedAt
+            )
+        )
+        notifications.update { current ->
             listOf(
                 AppNotification(
                     id = UUID.randomUUID().toString(),
-                    title = "Application submitted",
-                    message = "We received your application for ${saved.animalName}.",
-                    time = "Just now",
+                    title = "Заявка отправлена",
+                    message = "Приют получил заявку на ${saved.animalName}.",
+                    time = "Только что",
                     isRead = false,
                     relatedApplicationId = saved.id
                 )
-            ) + it
+            ) + current
         }
         return Result.success(saved)
     }
+
+    fun shelters(): List<Shelter> = SampleData.shelters
+    fun clinics(): List<Clinic> = SampleData.clinics
+    fun donations(): List<DonationOption> = SampleData.donations
+    fun lostFound(): Flow<List<LostFoundPost>> = lostFoundPosts
+    fun notifications(): Flow<List<AppNotification>> = notifications
 
     fun markNotificationRead(id: String) {
         notifications.update { list ->

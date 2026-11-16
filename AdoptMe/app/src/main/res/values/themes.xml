@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.AdoptMe" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#FFF8F5FF</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowBackground">#FFF8F5FF</item>
+        <item name="android:statusBarColor">#FF311E49</item>
+        <item name="android:navigationBarColor">#FFFFF8FC</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">#FF311E49</item>
     </style>
 </resources>

@@ -32,11 +32,11 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -63,8 +64,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.adoptme.app.R
 import com.adoptme.app.data.model.Animal
 import com.adoptme.app.data.model.HealthStatus
+import com.adoptme.app.data.model.titleRu
 import com.adoptme.app.ui.theme.ButtonShape
 import com.adoptme.app.ui.theme.CardShape
 import com.adoptme.app.ui.theme.ChipShape
@@ -74,10 +77,12 @@ import com.adoptme.app.ui.theme.ErrorRose
 import com.adoptme.app.ui.theme.GlowCyan
 import com.adoptme.app.ui.theme.GlowPink
 import com.adoptme.app.ui.theme.GlowPurple
-import com.adoptme.app.ui.theme.LavenderBg
 import com.adoptme.app.ui.theme.LavenderMist
-import com.adoptme.app.ui.theme.LilacCard
+import com.adoptme.app.ui.theme.Mauve
+import com.adoptme.app.ui.theme.OnGradient
+import com.adoptme.app.ui.theme.OnGradientMuted
 import com.adoptme.app.ui.theme.PinkNeon
+import com.adoptme.app.ui.theme.Plum
 import com.adoptme.app.ui.theme.PurpleGradient
 import com.adoptme.app.ui.theme.PurplePrimary
 import com.adoptme.app.ui.theme.SearchShape
@@ -132,6 +137,25 @@ fun GradientButton(
 }
 
 @Composable
+fun SecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = ButtonShape,
+        border = BorderStroke(1.5.dp, Plum),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Plum)
+    ) {
+        Text(text = text, style = MaterialTheme.typography.labelLarge, color = Plum)
+    }
+}
+
+@Composable
 fun AdoptTextField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -139,6 +163,7 @@ fun AdoptTextField(
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
     singleLine: Boolean = true,
+    minLines: Int = 1,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     isError: Boolean = false,
@@ -151,6 +176,7 @@ fun AdoptTextField(
         modifier = modifier.fillMaxWidth(),
         label = { Text(label) },
         singleLine = singleLine,
+        minLines = if (singleLine) 1 else minLines,
         isError = isError,
         supportingText = supportingText?.let { { Text(it, color = ErrorRose) } },
         visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
@@ -185,7 +211,7 @@ fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search pets, breed, shelter…"
+    placeholder: String = "Имя, порода или приют"
 ) {
     OutlinedTextField(
         value = query,
@@ -221,7 +247,7 @@ fun ScreenHeader(
     ) {
         if (onBack != null) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = OnGradient)
             }
         } else {
             Spacer(Modifier.width(12.dp))
@@ -229,6 +255,7 @@ fun ScreenHeader(
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
+            color = OnGradient,
             modifier = Modifier.weight(1f)
         )
         actions()
@@ -262,8 +289,8 @@ fun PageIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modifie
 fun CategoryChip(
     label: String,
     selected: Boolean,
-    onClick: () -> Unit,
-    accent: Color = PurplePrimary
+    accent: Color = PurplePrimary,
+    onClick: () -> Unit
 ) {
     val bg = if (selected) accent else White
     val fg = if (selected) White else TextSecondary
@@ -282,11 +309,12 @@ fun CategoryChip(
 
 @Composable
 fun HealthBadge(status: HealthStatus) {
-    val (label, color) = when (status) {
-        HealthStatus.HEALTHY -> "Healthy" to SuccessGreen
-        HealthStatus.RECOVERING -> "Recovering" to WarningAmber
-        HealthStatus.NEEDS_CARE -> "Needs care" to ErrorRose
+    val color = when (status) {
+        HealthStatus.HEALTHY -> SuccessGreen
+        HealthStatus.RECOVERING -> WarningAmber
+        HealthStatus.NEEDS_CARE -> ErrorRose
     }
+    val label = status.titleRu()
     Box(
         Modifier
             .clip(ChipShape)
@@ -312,12 +340,14 @@ fun AnimalCard(
                     AsyncImage(
                         model = animal.imageUrl,
                         contentDescription = animal.name,
+                        placeholder = painterResource(R.drawable.ic_paw),
+                        error = painterResource(R.drawable.ic_paw),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(imageHeight)
                             .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                            .background(LavenderMist)
+                            .background(Mauve)
                     )
                     IconButton(
                         onClick = onFavorite,
@@ -329,7 +359,7 @@ fun AnimalCard(
                     ) {
                         Icon(
                             imageVector = if (animal.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
+                            contentDescription = "Избранное",
                             tint = if (animal.isFavorite) PinkNeon else TextMuted
                         )
                     }
@@ -361,9 +391,9 @@ fun EmptyState(title: String, subtitle: String, actionLabel: String? = null, onA
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text(title, style = MaterialTheme.typography.headlineSmall, color = Plum)
         Spacer(Modifier.height(8.dp))
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Mauve)
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(16.dp))
             TextButton(onClick = onAction) {
@@ -374,17 +404,23 @@ fun EmptyState(title: String, subtitle: String, actionLabel: String? = null, onA
 }
 
 @Composable
-fun SectionTitle(title: String, action: String? = null, onAction: (() -> Unit)? = null) {
+fun SectionTitle(
+    title: String,
+    action: String? = null,
+    onAction: (() -> Unit)? = null,
+    horizontalPadding: Dp = 20.dp,
+    titleColor: Color = OnGradient
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = horizontalPadding, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+        Text(title, style = MaterialTheme.typography.headlineSmall, color = titleColor, modifier = Modifier.weight(1f))
         if (action != null && onAction != null) {
             TextButton(onClick = onAction) {
-                Text(action, color = PurplePrimary, fontWeight = FontWeight.SemiBold)
+                Text(action, color = OnGradient, fontWeight = FontWeight.SemiBold)
             }
         }
     }

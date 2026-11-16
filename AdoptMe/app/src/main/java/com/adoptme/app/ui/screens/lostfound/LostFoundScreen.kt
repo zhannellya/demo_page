@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.adoptme.app.data.model.LostFoundType
+import com.adoptme.app.data.model.titleRu
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.AdoptMeCard
 import com.adoptme.app.ui.components.ScreenHeader
@@ -47,7 +48,7 @@ fun LostFoundScreen(onBack: () -> Unit) {
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = "Lost & Found", onBack = onBack)
+            ScreenHeader(title = "Потеряшки", onBack = onBack)
             LazyColumn(
                 contentPadding = PaddingValues(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -74,7 +75,7 @@ fun LostFoundScreen(onBack: () -> Unit) {
                                         .background(accent.copy(0.18f))
                                         .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
-                                    Text(post.type.name, color = accent, style = MaterialTheme.typography.labelMedium)
+                                    Text(post.type.titleRu(), color = accent, style = MaterialTheme.typography.labelMedium)
                                 }
                                 Spacer(Modifier.height(6.dp))
                                 Text(post.animalName, style = MaterialTheme.typography.titleLarge)

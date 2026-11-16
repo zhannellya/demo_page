@@ -6,12 +6,33 @@ enum class HealthStatus { HEALTHY, NEEDS_CARE, RECOVERING }
 enum class ApplicationStatus { PENDING, UNDER_REVIEW, APPROVED, REJECTED }
 enum class LostFoundType { LOST, FOUND }
 
+enum class AgeGroup(val title: String) {
+    UNDER_ONE("До 1 года"),
+    ONE_TO_THREE("1–3 года"),
+    OVER_THREE("Старше 3 лет");
+
+    fun matches(ageMonths: Int): Boolean = when (this) {
+        UNDER_ONE -> ageMonths < 12
+        ONE_TO_THREE -> ageMonths in 12..36
+        OVER_THREE -> ageMonths > 36
+    }
+}
+
+data class AnimalFilter(
+    val query: String = "",
+    val type: AnimalType? = null,
+    val gender: Gender? = null,
+    val breed: String? = null,
+    val ageGroup: AgeGroup? = null
+)
+
 data class Animal(
     val id: String,
     val name: String,
     val type: AnimalType,
     val breed: String,
     val age: String,
+    val ageMonths: Int,
     val gender: Gender,
     val healthStatus: HealthStatus,
     val description: String,
@@ -102,3 +123,32 @@ data class OnboardingPage(
     val description: String,
     val imageRes: Int
 )
+
+fun Gender.titleRu(): String = when (this) {
+    Gender.MALE -> "Мальчик"
+    Gender.FEMALE -> "Девочка"
+}
+
+fun HealthStatus.titleRu(): String = when (this) {
+    HealthStatus.HEALTHY -> "Здоров"
+    HealthStatus.RECOVERING -> "Восстанавливается"
+    HealthStatus.NEEDS_CARE -> "Нужен уход"
+}
+
+fun ApplicationStatus.titleRu(): String = when (this) {
+    ApplicationStatus.PENDING -> "На рассмотрении"
+    ApplicationStatus.UNDER_REVIEW -> "Проверяется"
+    ApplicationStatus.APPROVED -> "Одобрена"
+    ApplicationStatus.REJECTED -> "Отклонена"
+}
+
+fun AnimalType.titleRu(): String = when (this) {
+    AnimalType.CAT -> "Кошка"
+    AnimalType.DOG -> "Собака"
+    AnimalType.OTHER -> "Другое"
+}
+
+fun LostFoundType.titleRu(): String = when (this) {
+    LostFoundType.LOST -> "Потерялся"
+    LostFoundType.FOUND -> "Нашёлся"
+}
