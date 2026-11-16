@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_primary">#FF7B5CFF</color>
-    <color name="lavender">#FFB8A9FF</color>
-    <color name="pink_neon">#FFFF6BCB</color>
-    <color name="cyan_neon">#FF5CE1E6</color>
-    <color name="background">#FFF8F5FF</color>
-    <color name="ic_launcher_background">#FF7B5CFF</color>
+    <color name="purple_primary">#FF43145D</color>
+    <color name="lavender">#FFF5C9F2</color>
+    <color name="pink_neon">#FF6F4F84</color>
+    <color name="cyan_neon">#FF311E49</color>
+    <color name="background">#FFFDF6FB</color>
+    <color name="ic_launcher_background">#FF43145D</color>
 </resources>

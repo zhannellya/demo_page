@@ -1,10 +1,8 @@
 package com.adoptme.app.ui.screens.favorites
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -21,6 +19,7 @@ import com.adoptme.app.ui.components.ScreenHeader
 import com.adoptme.app.ui.components.SoftBackground
 import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
 import com.adoptme.app.viewmodel.FavoritesViewModel
+import androidx.compose.foundation.layout.Column
 
 @Composable
 fun FavoritesScreen(
@@ -32,29 +31,27 @@ fun FavoritesScreen(
     val animals by vm.animals.collectAsState()
 
     SoftBackground {
-        Column(modifier = Modifier.fillMaxSize().padding(bottom = 88.dp)) {
-            ScreenHeader(title = "Favorites")
+        Column(Modifier.fillMaxSize()) {
+            ScreenHeader("Избранное")
             if (animals.isEmpty()) {
                 EmptyState(
-                    title = "No favorites yet",
-                    subtitle = "Tap the heart on a pet to save them here.",
-                    actionLabel = "Browse animals",
+                    title = "Пока пусто",
+                    subtitle = "Отмечайте сердечком животных, которых хотите запомнить. Список сохранится после перезапуска.",
+                    actionLabel = "К каталогу",
                     onAction = onBrowse
                 )
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(20.dp),
+                    columns = GridCells.Adaptive(160.dp),
+                    contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(animals, key = { it.id }) { animal ->
                         AnimalCard(
                             animal = animal,
                             onClick = { onOpenAnimal(animal.id) },
-                            onFavorite = { vm.toggleFavorite(animal.id) },
-                            imageHeight = 130.dp
+                            onFavorite = { vm.toggleFavorite(animal.id) }
                         )
                     }
                 }

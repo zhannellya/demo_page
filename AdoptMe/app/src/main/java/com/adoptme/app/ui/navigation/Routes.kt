@@ -3,30 +3,45 @@ package com.adoptme.app.ui.navigation
 sealed class Route(val path: String) {
     data object Splash : Route("splash")
     data object Onboarding : Route("onboarding")
-    data object SignUp : Route("signup")
     data object Login : Route("login")
+    data object Register : Route("register")
     data object Home : Route("home")
-    data object Animals : Route("animals")
+    data object Applications : Route("applications")
     data object Favorites : Route("favorites")
-    data object Map : Route("map")
+    data object Shelters : Route("shelters")
     data object Profile : Route("profile")
+    data object Settings : Route("settings")
+    data object News : Route("news")
+    data object NewsDetails : Route("news/{articleId}") {
+        fun create(articleId: String) = "news/$articleId"
+    }
+    data object Help : Route("help")
+    data object Chats : Route("chats")
+    data object ChatThread : Route("chat/{conversationId}") {
+        fun create(conversationId: String) = "chat/$conversationId"
+    }
     data object Notifications : Route("notifications")
-    data object LostFound : Route("lost_found")
-    data object HelpDonate : Route("help_donate")
-    data object Veterinary : Route("veterinary")
+    data object Admin : Route("admin")
+    data object AdminApplication : Route("admin/application/{applicationId}") {
+        fun create(applicationId: String) = "admin/application/$applicationId"
+    }
+    data object AnimalEditor : Route("admin/animal/{animalId}") {
+        fun create(animalId: String) = "admin/animal/$animalId"
+    }
     data object AnimalDetails : Route("animal/{animalId}") {
         fun create(animalId: String) = "animal/$animalId"
     }
-    data object AdoptionApplication : Route("apply/{animalId}/{animalName}") {
-        fun create(animalId: String, animalName: String) =
-            "apply/$animalId/${java.net.URLEncoder.encode(animalName, "UTF-8")}"
+    data object Adoption : Route("apply/{animalId}") {
+        fun create(animalId: String) = "apply/$animalId"
     }
+    data object LostFound : Route("lost_found")
+    data object Veterinary : Route("veterinary")
 }
 
 val bottomBarRoutes = listOf(
     Route.Home.path,
-    Route.Animals.path,
+    Route.Applications.path,
     Route.Favorites.path,
-    Route.Map.path,
+    Route.Shelters.path,
     Route.Profile.path
 )
