@@ -2,8 +2,8 @@
 <resources>
     <style name="Theme.AdoptMe" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#FFF8F5FF</item>
+        <item name="android:navigationBarColor">#FFFDF6FB</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowBackground">#FFF8F5FF</item>
+        <item name="android:windowBackground">#FFF5C9F2</item>
     </style>
 </resources>

@@ -63,8 +63,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.painterResource
+import com.adoptme.app.R
 import com.adoptme.app.data.model.Animal
+import com.adoptme.app.data.model.ApplicationStatus
+import com.adoptme.app.data.model.Availability
 import com.adoptme.app.data.model.HealthStatus
+import com.adoptme.app.utils.label
 import com.adoptme.app.ui.theme.ButtonShape
 import com.adoptme.app.ui.theme.CardShape
 import com.adoptme.app.ui.theme.ChipShape
@@ -185,7 +190,7 @@ fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search pets, breed, shelter…"
+    placeholder: String = "Поиск по кличке"
 ) {
     OutlinedTextField(
         value = query,
@@ -221,7 +226,7 @@ fun ScreenHeader(
     ) {
         if (onBack != null) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = TextPrimary)
             }
         } else {
             Spacer(Modifier.width(12.dp))
@@ -262,8 +267,8 @@ fun PageIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modifie
 fun CategoryChip(
     label: String,
     selected: Boolean,
-    onClick: () -> Unit,
-    accent: Color = PurplePrimary
+    accent: Color = PurplePrimary,
+    onClick: () -> Unit
 ) {
     val bg = if (selected) accent else White
     val fg = if (selected) White else TextSecondary
@@ -283,9 +288,9 @@ fun CategoryChip(
 @Composable
 fun HealthBadge(status: HealthStatus) {
     val (label, color) = when (status) {
-        HealthStatus.HEALTHY -> "Healthy" to SuccessGreen
-        HealthStatus.RECOVERING -> "Recovering" to WarningAmber
-        HealthStatus.NEEDS_CARE -> "Needs care" to ErrorRose
+        HealthStatus.HEALTHY -> status.label() to SuccessGreen
+        HealthStatus.RECOVERING -> status.label() to WarningAmber
+        HealthStatus.NEEDS_CARE -> status.label() to ErrorRose
     }
     Box(
         Modifier
@@ -310,9 +315,11 @@ fun AnimalCard(
             Column {
                 Box {
                     AsyncImage(
-                        model = animal.imageUrl,
+                        model = animal.imageUrl.takeIf { it.isNotBlank() },
                         contentDescription = animal.name,
                         contentScale = ContentScale.Crop,
+                        placeholder = painterResource(R.drawable.ic_paw),
+                        error = painterResource(R.drawable.ic_paw),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(imageHeight)
@@ -329,7 +336,7 @@ fun AnimalCard(
                     ) {
                         Icon(
                             imageVector = if (animal.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
+                            contentDescription = "Избранное",
                             tint = if (animal.isFavorite) PinkNeon else TextMuted
                         )
                     }
@@ -342,11 +349,28 @@ fun AnimalCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = animal.breed + " · " + animal.age,
-                        style = MaterialTheme.typography.bodySmall
+                        text = animal.breed + " · " + animal.ageLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = animal.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 6.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     HealthBadge(status = animal.healthStatus)
+                    if (animal.availability != Availability.AVAILABLE) {
+                        Text(
+                            text = animal.availability.label(),
+                            color = PurplePrimary,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                    }
                 }
             }
         }
@@ -370,6 +394,43 @@ fun EmptyState(title: String, subtitle: String, actionLabel: String? = null, onA
                 Text(actionLabel, color = PurplePrimary, fontWeight = FontWeight.SemiBold)
             }
         }
+    }
+}
+
+@Composable
+fun DemoBanner(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(LavenderMist)
+            .padding(12.dp),
+        color = TextPrimary,
+        style = MaterialTheme.typography.bodySmall
+    )
+}
+
+@Composable
+fun StatusChip(status: ApplicationStatus) {
+    val color = when (status) {
+        ApplicationStatus.PENDING -> WarningAmber
+        ApplicationStatus.APPROVED -> SuccessGreen
+        ApplicationStatus.REJECTED -> ErrorRose
+        ApplicationStatus.CANCELLED -> TextMuted
+    }
+    Box(
+        Modifier
+            .clip(ChipShape)
+            .background(color.copy(alpha = 0.15f))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            status.label(),
+            color = color,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 

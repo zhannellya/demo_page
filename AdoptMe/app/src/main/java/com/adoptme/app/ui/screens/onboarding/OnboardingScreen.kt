@@ -36,7 +36,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.adoptme.app.data.local.SampleData
+import com.adoptme.app.R
+import com.adoptme.app.data.local.SeedData
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.GradientButton
 import com.adoptme.app.ui.components.PageIndicator
@@ -49,10 +50,8 @@ import com.adoptme.app.ui.theme.White
 import kotlinx.coroutines.launch
 
 @Composable
-fun OnboardingScreen(
-    onFinished: () -> Unit
-) {
-    val pages = SampleData.onboardingPages
+fun OnboardingScreen(onFinished: () -> Unit) {
+    val pages = SeedData.onboardingPages
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
     val container = LocalAppContainer.current
@@ -65,15 +64,23 @@ fun OnboardingScreen(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Image(
+                    painter = painterResource(R.drawable.adoptme_logo),
+                    contentDescription = "Логотип ADOPTME",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                )
                 TextButton(onClick = {
                     scope.launch {
                         container.authRepository.completeOnboarding()
                         onFinished()
                     }
                 }) {
-                    Text("Skip", color = PurplePrimary, fontWeight = FontWeight.SemiBold)
+                    Text("Пропустить", color = PurplePrimary, fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -91,12 +98,12 @@ fun OnboardingScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(280.dp)
+                            .size(260.dp)
                             .shadow(
                                 24.dp,
                                 RoundedCornerShape(40.dp),
                                 ambientColor = PurplePrimary.copy(0.25f),
-                                spotColor = PinkNeon.copy(0.35f)
+                                spotColor = PinkNeon.copy(0.28f)
                             )
                             .clip(RoundedCornerShape(40.dp))
                             .background(White),
@@ -109,9 +116,7 @@ fun OnboardingScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-
-                    Spacer(Modifier.height(36.dp))
-
+                    Spacer(Modifier.height(28.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -127,17 +132,24 @@ fun OnboardingScreen(
                                     (fadeOut() + slideOutHorizontally { -it / 4 })
                             },
                             label = "onboardingText"
-                        ) { p ->
+                        ) { index ->
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = pages[p].title,
+                                    text = "ADOPTME",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = PurplePrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = pages[index].title,
                                     style = MaterialTheme.typography.headlineLarge,
                                     textAlign = TextAlign.Center,
                                     color = PurplePrimary
                                 )
                                 Spacer(Modifier.height(12.dp))
                                 Text(
-                                    text = pages[p].description,
+                                    text = pages[index].description,
                                     style = MaterialTheme.typography.bodyLarge,
                                     textAlign = TextAlign.Center,
                                     color = TextSecondary
@@ -153,11 +165,10 @@ fun OnboardingScreen(
                 currentPage = pagerState.currentPage,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(vertical = 20.dp)
+                    .padding(vertical = 16.dp)
             )
-
             GradientButton(
-                text = if (pagerState.currentPage == pages.lastIndex) "Get Started" else "Next",
+                text = if (pagerState.currentPage == pages.lastIndex) "Начать" else "Далее",
                 onClick = {
                     scope.launch {
                         if (pagerState.currentPage < pages.lastIndex) {

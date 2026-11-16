@@ -1,0 +1,4 @@
+## Copy to local.properties. sdk.dir is created by Android Studio.
+## MAPS_API_KEY is optional. Leave it empty to run without Google Maps.
+sdk.dir=/path/to/Android/Sdk
+MAPS_API_KEY=

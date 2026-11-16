@@ -1,90 +1,70 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.adoptme.app.data.repository
 
-import com.adoptme.app.data.local.SampleData
 import com.adoptme.app.data.local.SessionStore
-import com.adoptme.app.data.model.AdoptionApplication
+import com.adoptme.app.data.local.dao.AnimalDao
+import com.adoptme.app.data.local.dao.FavoriteDao
+import com.adoptme.app.data.local.entity.FavoriteEntity
+import com.adoptme.app.data.local.toEntity
+import com.adoptme.app.data.local.toModel
 import com.adoptme.app.data.model.Animal
-import com.adoptme.app.data.model.AnimalType
-import com.adoptme.app.data.model.AppNotification
-import com.adoptme.app.data.model.ApplicationStatus
-import com.adoptme.app.data.model.Clinic
-import com.adoptme.app.data.model.DonationOption
-import com.adoptme.app.data.model.LostFoundPost
-import com.adoptme.app.data.model.Shelter
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
-import java.util.UUID
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
-class AnimalRepository(private val sessionStore: SessionStore) {
-
-    private val applications = MutableStateFlow(SampleData.sampleApplications)
-    private val notifications = MutableStateFlow(SampleData.notifications)
-    private val lostFoundPosts = MutableStateFlow(SampleData.lostFound)
-
-    val favoriteIds: Flow<Set<String>> = sessionStore.favoriteIds
-
-    fun animalsWithFavorites(): Flow<List<Animal>> =
-        favoriteIds.combine(MutableStateFlow(SampleData.animals)) { favs, animals ->
-            animals.map { it.copy(isFavorite = it.id in favs) }
-        }
-
-    fun getAnimal(id: String): Animal? = SampleData.animals.find { it.id == id }
-
-    fun searchAnimals(
-        query: String,
-        type: AnimalType?,
-        favoritesOnly: Boolean,
-        favoriteIds: Set<String>
-    ): List<Animal> {
-        return SampleData.animals
-            .map { it.copy(isFavorite = it.id in favoriteIds) }
-            .filter { animal ->
-                val matchesQuery = query.isBlank() ||
-                    animal.name.contains(query, true) ||
-                    animal.breed.contains(query, true) ||
-                    animal.location.contains(query, true)
-                val matchesType = type == null || animal.type == type
-                val matchesFav = !favoritesOnly || animal.isFavorite
-                matchesQuery && matchesType && matchesFav
+class AnimalRepository(
+    private val animalDao: AnimalDao,
+    private val favoriteDao: FavoriteDao,
+    private val sessionStore: SessionStore
+) {
+    fun observeAnimals(): Flow<List<Animal>> {
+        return sessionStore.session.flatMapLatest { snapshot ->
+            val favorites = if (snapshot.userId.isBlank()) {
+                flowOf(emptyList())
+            } else {
+                favoriteDao.observeIds(snapshot.userId)
             }
-    }
-
-    suspend fun toggleFavorite(id: String) = sessionStore.toggleFavorite(id)
-
-    fun shelters(): List<Shelter> = SampleData.shelters
-    fun clinics(): List<Clinic> = SampleData.clinics
-    fun donations(): List<DonationOption> = SampleData.donations
-    fun lostFound(): Flow<List<LostFoundPost>> = lostFoundPosts
-    fun applications(): Flow<List<AdoptionApplication>> = applications
-    fun notifications(): Flow<List<AppNotification>> = notifications
-
-    fun submitApplication(application: AdoptionApplication): Result<AdoptionApplication> {
-        val saved = application.copy(
-            id = UUID.randomUUID().toString(),
-            status = ApplicationStatus.PENDING,
-            submittedAt = System.currentTimeMillis()
-        )
-        applications.update { listOf(saved) + it }
-        notifications.update {
-            listOf(
-                AppNotification(
-                    id = UUID.randomUUID().toString(),
-                    title = "Application submitted",
-                    message = "We received your application for ${saved.animalName}.",
-                    time = "Just now",
-                    isRead = false,
-                    relatedApplicationId = saved.id
-                )
-            ) + it
+            combine(animalDao.observeAll(), favorites) { animals, favoriteIds ->
+                val favoriteSet = favoriteIds.toSet()
+                animals.map { entity -> entity.toModel(isFavorite = entity.id in favoriteSet) }
+            }
         }
-        return Result.success(saved)
     }
 
-    fun markNotificationRead(id: String) {
-        notifications.update { list ->
-            list.map { if (it.id == id) it.copy(isRead = true) else it }
+    fun observeAnimal(id: String): Flow<Animal?> = observeAnimals().map { animals ->
+        animals.find { it.id == id }
+    }
+
+    suspend fun toggleFavorite(animalId: String) {
+        val userId = sessionStore.currentUserId() ?: return
+        if (favoriteDao.exists(userId, animalId)) {
+            favoriteDao.delete(userId, animalId)
+        } else {
+            favoriteDao.insert(FavoriteEntity(userId, animalId))
+        }
+    }
+
+    suspend fun save(animal: Animal): Result<Unit> {
+        if (animal.name.trim().length < 2) {
+            return Result.failure(IllegalArgumentException("Укажите кличку."))
+        }
+        if (animal.breed.isBlank() || animal.description.isBlank() || animal.story.isBlank() || animal.personality.isBlank()) {
+            return Result.failure(IllegalArgumentException("Заполните породу, характер, описание и историю."))
+        }
+        if (animal.ageMonths <= 0 || animal.ageLabel.isBlank()) {
+            return Result.failure(IllegalArgumentException("Укажите возраст."))
+        }
+        if (animal.city.isBlank() || animal.shelterName.isBlank()) {
+            return Result.failure(IllegalArgumentException("Выберите приют."))
+        }
+        return try {
+            animalDao.insert(animal.toEntity())
+            Result.success(Unit)
+        } catch (_: Exception) {
+            Result.failure(IllegalStateException("Не удалось сохранить карточку животного."))
         }
     }
 }
