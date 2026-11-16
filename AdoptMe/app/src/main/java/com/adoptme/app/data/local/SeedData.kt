@@ -126,7 +126,7 @@ object SeedData {
             story = "Барсик привык жить в квартире. Он не портит мебель, уживается с другими спокойными кошками и выбирает самое солнечное место на подоконнике.",
             shelterId = "s-msk",
             city = "Москва",
-            imageKey = "vd_barsik"
+            imageKey = "animal_barsik"
         ),
         animal(
             id = "bobik",
@@ -141,7 +141,7 @@ object SeedData {
             story = "Бобик вырос у волонтёров. Он знает «сидеть» и «ко мне», обожает мягкие игрушки и подойдёт семье, которая готова гулять каждый день.",
             shelterId = "s-nsk",
             city = "Новосибирск",
-            imageKey = "vd_bobik"
+            imageKey = "animal_bobik"
         ),
         animal(
             id = "druzhok",
@@ -156,7 +156,7 @@ object SeedData {
             story = "Дружок остался без хозяина, когда семья не смогла забрать его в другой город. Он аккуратный дома и с радостью встречает у двери.",
             shelterId = "s-msk",
             city = "Москва",
-            imageKey = "vd_druzhok"
+            imageKey = "animal_druzhok"
         ),
         animal(
             id = "reks",
@@ -171,7 +171,7 @@ object SeedData {
             story = "Рекс много лет жил при сторожке и хорошо знает команды. Ему нужен опытный человек, неспешные прогулки и место, где можно лежать рядом.",
             shelterId = "s-kzn",
             city = "Казань",
-            imageKey = "vd_reks"
+            imageKey = "animal_reks"
         ),
         animal(
             id = "max",
@@ -186,7 +186,7 @@ object SeedData {
             story = "Макса отдали в приют щенком. Он обожает воду и апортировку, уже привит в рамках демонстрационной анкеты и ждёт семью, которой нравятся долгие прогулки.",
             shelterId = "s-spb",
             city = "Санкт-Петербург",
-            imageKey = "vd_max"
+            imageKey = "animal_max"
         )
     )
 

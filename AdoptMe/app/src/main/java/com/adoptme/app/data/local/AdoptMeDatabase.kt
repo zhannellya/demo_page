@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.adoptme.app.data.local.dao.AnimalDao
 import com.adoptme.app.data.local.dao.ApplicationDao
 import com.adoptme.app.data.local.dao.ChatDao
@@ -31,7 +33,7 @@ import com.adoptme.app.data.local.entity.UserEntity
         ChatThreadEntity::class,
         ChatMessageEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AdoptMeDatabase : RoomDatabase() {
@@ -49,7 +51,28 @@ abstract class AdoptMeDatabase : RoomDatabase() {
                 context.applicationContext,
                 AdoptMeDatabase::class.java,
                 "adoptme.db"
-            ).build()
+            ).addMigrations(MIGRATION_1_2).build()
+        }
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val photos = listOf(
+                    "sharik" to "animal_sharik",
+                    "tosha" to "animal_tosha",
+                    "bella" to "animal_bella",
+                    "barsik" to "animal_barsik",
+                    "bobik" to "animal_bobik",
+                    "druzhok" to "animal_druzhok",
+                    "reks" to "animal_reks",
+                    "max" to "animal_max"
+                )
+                photos.forEach { (id, key) ->
+                    db.execSQL(
+                        "UPDATE animals SET imageKey = ? WHERE id = ?",
+                        arrayOf(key, id)
+                    )
+                }
+            }
         }
     }
 }
