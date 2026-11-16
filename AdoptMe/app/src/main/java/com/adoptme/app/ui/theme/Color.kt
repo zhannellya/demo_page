@@ -3,42 +3,46 @@ package com.adoptme.app.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Core palette — elegant purple & lavender with neon accents
-val PurpleDeep = Color(0xFF5B3FD6)
-val PurplePrimary = Color(0xFF7B5CFF)
-val PurpleSoft = Color(0xFF9B84FF)
-val Lavender = Color(0xFFB8A9FF)
-val LavenderMist = Color(0xFFE8E0FF)
-val LavenderBg = Color(0xFFF8F5FF)
-val LilacCard = Color(0xFFFFFBFF)
+val Blush = Color(0xFFF5C9F2)
+val PurpleMid = Color(0xFF6F4F84)
+val Ink = Color(0xFF311E49)
+val Plum = Color(0xFF43145D)
 
-val PinkNeon = Color(0xFFFF6BCB)
-val PinkSoft = Color(0xFFFFB3E0)
-val CyanNeon = Color(0xFF5CE1E6)
-val CyanSoft = Color(0xFFB8F4F6)
+val PurpleDeep = Ink
+val PurplePrimary = PurpleMid
+val PurpleSoft = Color(0xFF8D6B9A)
+val Lavender = Blush
+val LavenderMist = Color(0xFFF8E7F4)
+val LavenderBg = Color(0xFFFBF3F8)
+val LilacCard = Color(0xFFFFFFFF)
 
-val TextPrimary = Color(0xFF2D2456)
-val TextSecondary = Color(0xFF7A7199)
-val TextMuted = Color(0xFFA89FBF)
-val DividerSoft = Color(0xFFEDE6FA)
+val PinkNeon = Color(0xFFC46EB4)
+val PinkSoft = Blush
+val CyanNeon = Color(0xFF6F4F84)
+val CyanSoft = Color(0xFFE7D4EA)
 
-val SuccessGreen = Color(0xFF4CD964)
-val WarningAmber = Color(0xFFFFB020)
-val ErrorRose = Color(0xFFFF5A7A)
+val TextPrimary = Ink
+val TextSecondary = Color(0xFF5A4568)
+val TextMuted = Color(0xFF8C7894)
+val DividerSoft = Color(0xFFEAD7E8)
+
+val SuccessGreen = Color(0xFF2E8B57)
+val WarningAmber = Color(0xFFB86E00)
+val ErrorRose = Color(0xFFB4234A)
 val White = Color(0xFFFFFFFF)
 
 val PurpleGradient = Brush.horizontalGradient(
-    colors = listOf(PurplePrimary, Color(0xFFA78BFA), PinkNeon.copy(alpha = 0.85f))
+    colors = listOf(PurpleMid, Plum)
 )
 
 val PurpleVerticalGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF8B6CFF), PurplePrimary, PurpleDeep)
+    colors = listOf(Blush, PurpleMid, Plum)
 )
 
 val SoftBgGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFFF3EDFF), LavenderBg, Color(0xFFFFF0FA))
+    colors = listOf(Blush, Color(0xFFF7E4F3), Color(0xFFF3DFF1))
 )
 
-val GlowPink = PinkNeon.copy(alpha = 0.35f)
-val GlowCyan = CyanNeon.copy(alpha = 0.30f)
-val GlowPurple = PurplePrimary.copy(alpha = 0.25f)
+val GlowPink = Blush.copy(alpha = 0.55f)
+val GlowCyan = PurpleMid.copy(alpha = 0.18f)
+val GlowPurple = Plum.copy(alpha = 0.16f)

@@ -4,32 +4,41 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.adoptme.app.data.model.AdoptionApplication
+import com.adoptme.app.data.model.AgeGroup
 import com.adoptme.app.data.model.Animal
-import com.adoptme.app.data.model.AnimalType
-import com.adoptme.app.data.model.AppNotification
+import com.adoptme.app.data.model.AnimalQuery
+import com.adoptme.app.data.model.AnimalStatus
+import com.adoptme.app.data.model.ApplicationDraft
 import com.adoptme.app.data.model.ApplicationStatus
-import com.adoptme.app.data.model.Clinic
-import com.adoptme.app.data.model.DonationOption
-import com.adoptme.app.data.model.LostFoundPost
+import com.adoptme.app.data.model.ChatMessage
+import com.adoptme.app.data.model.ChatThread
+import com.adoptme.app.data.model.Gender
+import com.adoptme.app.data.model.NewsArticle
+import com.adoptme.app.data.model.PetSize
 import com.adoptme.app.data.model.Shelter
+import com.adoptme.app.data.model.Species
 import com.adoptme.app.data.model.UserProfile
-import com.adoptme.app.data.repository.AnimalRepository
-import com.adoptme.app.data.repository.AuthRepository
+import com.adoptme.app.data.model.UserRole
+import com.adoptme.app.data.model.ageGroupOf
 import com.adoptme.app.di.AppContainer
+import com.adoptme.app.utils.AnimalFilter
+import com.adoptme.app.utils.ShelterFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class AuthUiState(
+private val Share = SharingStarted.WhileSubscribed(5_000)
+
+data class AuthFormState(
     val name: String = "",
     val email: String = "",
-    val phone: String = "",
     val password: String = "",
     val confirmPassword: String = "",
     val loading: Boolean = false,
@@ -37,155 +46,146 @@ data class AuthUiState(
     val success: Boolean = false
 )
 
-class AuthViewModel(private val authRepository: AuthRepository) : ViewModel() {
-    private val _ui = MutableStateFlow(AuthUiState())
-    val ui: StateFlow<AuthUiState> = _ui.asStateFlow()
+class AuthViewModel(private val container: AppContainer) : ViewModel() {
+    private val _ui = MutableStateFlow(AuthFormState())
+    val ui: StateFlow<AuthFormState> = _ui.asStateFlow()
 
-    fun update(transform: (AuthUiState) -> AuthUiState) = _ui.update(transform)
+    fun update(transform: (AuthFormState) -> AuthFormState) {
+        _ui.update { transform(it).copy(error = null, success = false) }
+    }
 
-    fun signUp() = viewModelScope.launch {
+    fun register() = viewModelScope.launch {
         val state = _ui.value
-        if (state.password != state.confirmPassword) {
-            _ui.update { it.copy(error = "Passwords do not match.") }
-            return@launch
-        }
+        if (state.loading || state.success) return@launch
         _ui.update { it.copy(loading = true, error = null) }
-        val result = authRepository.signUp(state.name, state.email, state.password, state.phone)
+        val result = container.authRepository.register(
+            state.name,
+            state.email,
+            state.password,
+            state.confirmPassword
+        )
         _ui.update { current ->
             result.fold(
                 onSuccess = { current.copy(loading = false, success = true) },
-                onFailure = { e -> current.copy(loading = false, error = e.message) }
+                onFailure = { error -> current.copy(loading = false, error = error.message) }
             )
         }
     }
 
     fun login() = viewModelScope.launch {
         val state = _ui.value
+        if (state.loading || state.success) return@launch
         _ui.update { it.copy(loading = true, error = null) }
-        val result = authRepository.login(state.email, state.password)
+        val result = container.authRepository.login(state.email, state.password)
         _ui.update { current ->
             result.fold(
                 onSuccess = { current.copy(loading = false, success = true) },
-                onFailure = { e -> current.copy(loading = false, error = e.message) }
+                onFailure = { error -> current.copy(loading = false, error = error.message) }
             )
         }
     }
 }
 
 data class HomeUiState(
-    val query: String = "",
-    val selectedCategory: AnimalType? = null,
+    val query: AnimalQuery = AnimalQuery(),
     val animals: List<Animal> = emptyList(),
-    val userName: String = "Friend"
+    val cities: List<String> = emptyList(),
+    val userName: String = ""
 )
 
-class HomeViewModel(
-    private val animalRepository: AnimalRepository,
-    private val authRepository: AuthRepository
-) : ViewModel() {
-    private val query = MutableStateFlow("")
-    private val category = MutableStateFlow<AnimalType?>(null)
-
+class HomeViewModel(private val container: AppContainer) : ViewModel() {
+    private val query = MutableStateFlow(AnimalQuery())
     val ui: StateFlow<HomeUiState> = combine(
         query,
-        category,
-        animalRepository.animalsWithFavorites(),
-        authRepository.currentUser
-    ) { q, cat, animals, user ->
-        val filtered = animals.filter {
-            (q.isBlank() || it.name.contains(q, true) || it.breed.contains(q, true) || it.location.contains(q, true)) &&
-                (cat == null || it.type == cat)
-        }
+        container.catalogRepository.animals,
+        container.authRepository.currentUser
+    ) { q, animals, user ->
         HomeUiState(
             query = q,
-            selectedCategory = cat,
-            animals = filtered,
-            userName = user.name.ifBlank { "Friend" }
+            animals = AnimalFilter.apply(animals, q),
+            cities = animals.map { it.city }.distinct().sorted(),
+            userName = user.name
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+    }.stateIn(viewModelScope, Share, HomeUiState())
 
-    fun setQuery(value: String) { query.value = value }
-    fun setCategory(type: AnimalType?) { category.value = type }
-    fun toggleFavorite(id: String) = viewModelScope.launch { animalRepository.toggleFavorite(id) }
+    fun setName(value: String) = query.update { it.copy(name = value) }
+    fun setSpecies(value: Species?) = query.update { it.copy(species = value) }
+    fun setAge(value: AgeGroup?) = query.update { it.copy(ageGroup = value) }
+    fun setSize(value: PetSize?) = query.update { it.copy(size = value) }
+    fun setGender(value: Gender?) = query.update { it.copy(gender = value) }
+    fun setCity(value: String?) = query.update { it.copy(city = value) }
+    fun clearFilters() { query.value = AnimalQuery(name = query.value.name) }
+
+    fun toggleFavorite(id: String) = viewModelScope.launch {
+        container.catalogRepository.toggleFavorite(id)
+    }
 }
 
-class AnimalsViewModel(private val animalRepository: AnimalRepository) : ViewModel() {
-    private val query = MutableStateFlow("")
-    private val category = MutableStateFlow<AnimalType?>(null)
+class FavoritesViewModel(private val container: AppContainer) : ViewModel() {
+    val animals: StateFlow<List<Animal>> = container.catalogRepository.animals
+        .combine(MutableStateFlow(Unit)) { list, _ -> list.filter { it.isFavorite } }
+        .stateIn(viewModelScope, Share, emptyList())
 
-    val animals: StateFlow<List<Animal>> = combine(
-        query,
-        category,
-        animalRepository.animalsWithFavorites()
-    ) { q, cat, list ->
-        list.filter {
-            (q.isBlank() || it.name.contains(q, true) || it.breed.contains(q, true) || it.location.contains(q, true)) &&
-                (cat == null || it.type == cat)
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val queryState = query.asStateFlow()
-    val categoryState = category.asStateFlow()
-
-    fun setQuery(value: String) { query.value = value }
-    fun setCategory(type: AnimalType?) { category.value = type }
-    fun toggleFavorite(id: String) = viewModelScope.launch { animalRepository.toggleFavorite(id) }
-}
-
-class FavoritesViewModel(private val animalRepository: AnimalRepository) : ViewModel() {
-    val animals: StateFlow<List<Animal>> = animalRepository.animalsWithFavorites()
-        .map { list -> list.filter { it.isFavorite } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun toggleFavorite(id: String) = viewModelScope.launch { animalRepository.toggleFavorite(id) }
+    fun toggleFavorite(id: String) = viewModelScope.launch {
+        container.catalogRepository.toggleFavorite(id)
+    }
 }
 
 class DetailsViewModel(
-    private val animalRepository: AnimalRepository,
-    animalId: String
+    private val container: AppContainer,
+    private val animalId: String
 ) : ViewModel() {
-    private val _animal = MutableStateFlow<Animal?>(null)
-    val animal: StateFlow<Animal?> = _animal.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            animalRepository.animalsWithFavorites().collect { list ->
-                _animal.value = list.find { it.id == animalId }
-            }
-        }
-    }
+    val animal: StateFlow<Animal?> = container.catalogRepository.observeAnimal(animalId)
+        .stateIn(viewModelScope, Share, null)
 
     fun toggleFavorite() = viewModelScope.launch {
-        _animal.value?.id?.let { animalRepository.toggleFavorite(it) }
+        container.catalogRepository.toggleFavorite(animalId)
     }
 }
 
 data class ApplicationFormState(
+    val animalName: String = "",
     val fullName: String = "",
     val email: String = "",
     val phone: String = "",
     val address: String = "",
-    val housingType: String = "Apartment",
-    val hasOtherPets: Boolean = false,
     val experience: String = "",
     val reason: String = "",
     val loading: Boolean = false,
     val error: String? = null,
-    val submitted: Boolean = false
+    val submittedNumber: String? = null,
+    val unavailable: Boolean = false
 )
 
 class ApplicationViewModel(
-    private val animalRepository: AnimalRepository,
-    private val authRepository: AuthRepository,
-    private val animalId: String,
-    private val animalName: String
+    private val container: AppContainer,
+    private val animalId: String
 ) : ViewModel() {
     private val _form = MutableStateFlow(ApplicationFormState())
     val form: StateFlow<ApplicationFormState> = _form.asStateFlow()
+    private var animalStatus: AnimalStatus = AnimalStatus.AVAILABLE
+    private var animalName: String = ""
+    private var prefilled = false
 
     init {
         viewModelScope.launch {
-            authRepository.currentUser.collect { user ->
+            container.catalogRepository.observeAnimal(animalId).collect { animal ->
+                if (animal == null) return@collect
+                animalStatus = animal.status
+                animalName = animal.name
+                _form.update {
+                    it.copy(
+                        animalName = animal.name,
+                        unavailable = animal.status == AnimalStatus.ADOPTED
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            container.authRepository.currentUser.collect { user ->
+                if (prefilled) return@collect
+                if (user.id.isBlank()) return@collect
+                prefilled = true
                 _form.update {
                     it.copy(
                         fullName = it.fullName.ifBlank { user.name },
@@ -199,109 +199,314 @@ class ApplicationViewModel(
 
     fun update(transform: (ApplicationFormState) -> ApplicationFormState) = _form.update(transform)
 
-    fun submit() = viewModelScope.launch {
-        val f = _form.value
-        when {
-            f.fullName.isBlank() -> _form.update { it.copy(error = "Name is required.") }
-            f.email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(f.email).matches() ->
-                _form.update { it.copy(error = "Valid email is required.") }
-            f.phone.isBlank() -> _form.update { it.copy(error = "Phone is required.") }
-            f.address.isBlank() -> _form.update { it.copy(error = "Address is required.") }
-            f.reason.isBlank() -> _form.update { it.copy(error = "Tell us why you’d like to adopt.") }
-            else -> {
-                _form.update { it.copy(loading = true, error = null) }
-                animalRepository.submitApplication(
-                    AdoptionApplication(
-                        id = "",
-                        animalId = animalId,
-                        animalName = animalName,
-                        applicantName = f.fullName.trim(),
-                        email = f.email.trim(),
-                        phone = f.phone.trim(),
-                        address = f.address.trim(),
-                        housingType = f.housingType,
-                        hasOtherPets = f.hasOtherPets,
-                        experience = f.experience.trim(),
-                        reason = f.reason.trim(),
-                        status = ApplicationStatus.PENDING
-                    )
+    fun submit() {
+        val current = _form.value
+        if (current.loading || current.submittedNumber != null) return
+        viewModelScope.launch {
+            _form.update { it.copy(loading = true, error = null) }
+            val user = container.sessionStore.snapshot()
+            val result = container.catalogRepository.submitApplication(
+                ApplicationDraft(
+                    userId = user.userId,
+                    animalId = animalId,
+                    animalName = animalName.ifBlank { current.animalName },
+                    animalStatus = animalStatus,
+                    applicantName = current.fullName,
+                    email = current.email,
+                    phone = current.phone,
+                    address = current.address,
+                    experience = current.experience,
+                    reason = current.reason
                 )
-                _form.update { it.copy(loading = false, submitted = true) }
+            )
+            _form.update { state ->
+                result.fold(
+                    onSuccess = { saved -> state.copy(loading = false, submittedNumber = saved.number) },
+                    onFailure = { error -> state.copy(loading = false, error = error.message) }
+                )
             }
         }
     }
 }
 
-class ProfileViewModel(
-    private val authRepository: AuthRepository,
-    private val animalRepository: AnimalRepository
+class MyApplicationsViewModel(private val container: AppContainer) : ViewModel() {
+    val items: StateFlow<List<AdoptionApplication>> = container.catalogRepository.myApplications
+        .stateIn(viewModelScope, Share, emptyList())
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    fun cancel(id: String) = viewModelScope.launch {
+        val result = container.catalogRepository.cancelApplication(id)
+        _message.value = result.fold(
+            onSuccess = { "Заявка отменена." },
+            onFailure = { it.message }
+        )
+    }
+
+    fun clearMessage() { _message.value = null }
+}
+
+data class ShelterUiState(
+    val city: String? = null,
+    val query: String = "",
+    val cities: List<String> = emptyList(),
+    val shelters: List<Shelter> = emptyList()
+)
+
+class ShelterViewModel(container: AppContainer) : ViewModel() {
+    private val city = MutableStateFlow<String?>(null)
+    private val query = MutableStateFlow("")
+    val ui: StateFlow<ShelterUiState> = combine(city, query, container.catalogRepository.shelters) { selected, text, shelters ->
+        ShelterUiState(
+            city = selected,
+            query = text,
+            cities = shelters.map { it.city }.distinct().sorted(),
+            shelters = ShelterFilter.apply(shelters, selected, text)
+        )
+    }.stateIn(viewModelScope, Share, ShelterUiState())
+
+    fun setCity(value: String?) { city.value = value }
+    fun setQuery(value: String) { query.value = value }
+}
+
+class ShelterDetailViewModel(container: AppContainer, shelterId: String) : ViewModel() {
+    val shelter: StateFlow<Shelter?> = container.catalogRepository.observeShelter(shelterId)
+        .stateIn(viewModelScope, Share, null)
+}
+
+class ProfileViewModel(private val container: AppContainer) : ViewModel() {
+    val user: StateFlow<UserProfile> = container.authRepository.currentUser
+        .stateIn(viewModelScope, Share, UserProfile())
+    val session = container.sessionStore.session.stateIn(
+        viewModelScope,
+        Share,
+        com.adoptme.app.data.local.SessionSnapshot()
+    )
+    val favoriteCount: StateFlow<Int> = container.catalogRepository.animals
+        .combine(MutableStateFlow(Unit)) { list, _ -> list.count { it.isFavorite } }
+        .stateIn(viewModelScope, Share, 0)
+    val applicationCount: StateFlow<Int> = container.catalogRepository.myApplications
+        .combine(MutableStateFlow(Unit)) { list, _ -> list.size }
+        .stateIn(viewModelScope, Share, 0)
+
+    fun logout(onDone: () -> Unit) = viewModelScope.launch {
+        container.authRepository.logout()
+        onDone()
+    }
+
+    fun setNotifications(enabled: Boolean) = viewModelScope.launch {
+        container.authRepository.setNotificationsEnabled(enabled)
+    }
+
+    val isLocalAdmin: StateFlow<Boolean> = user
+        .combine(MutableStateFlow(Unit)) { profile, _ -> profile.role == UserRole.LOCAL_ADMIN }
+        .stateIn(viewModelScope, Share, false)
+}
+
+class NewsListViewModel(container: AppContainer) : ViewModel() {
+    val articles: StateFlow<List<NewsArticle>> = container.newsRepository.articles
+        .stateIn(viewModelScope, Share, emptyList())
+}
+
+class NewsDetailViewModel(container: AppContainer, id: String) : ViewModel() {
+    val article: StateFlow<NewsArticle?> = container.newsRepository.article(id)
+        .stateIn(viewModelScope, Share, null)
+}
+
+class ChatListViewModel(private val container: AppContainer) : ViewModel() {
+    val threads: StateFlow<List<ChatThread>> = container.chatRepository.threads
+        .stateIn(viewModelScope, Share, emptyList())
+
+    init {
+        viewModelScope.launch { container.chatRepository.ensureInbox() }
+    }
+}
+
+class ChatThreadViewModel(
+    private val container: AppContainer,
+    private val threadId: String
 ) : ViewModel() {
-    val user: StateFlow<UserProfile> = authRepository.currentUser
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserProfile())
-    val applications: StateFlow<List<AdoptionApplication>> = animalRepository.applications()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val messages: StateFlow<List<ChatMessage>> = container.chatRepository.messages(threadId)
+        .stateIn(viewModelScope, Share, emptyList())
+    private val _draft = MutableStateFlow("")
+    val draft: StateFlow<String> = _draft.asStateFlow()
+    private val _sending = MutableStateFlow(false)
+    val sending: StateFlow<Boolean> = _sending.asStateFlow()
 
-    fun logout() = viewModelScope.launch { authRepository.logout() }
+    fun setDraft(value: String) { _draft.value = value }
+
+    fun send() {
+        val text = _draft.value
+        if (_sending.value || text.isBlank()) return
+        viewModelScope.launch {
+            _sending.value = true
+            _draft.value = ""
+            container.chatRepository.send(threadId, text)
+            _sending.value = false
+        }
+    }
 }
 
-class NotificationsViewModel(private val animalRepository: AnimalRepository) : ViewModel() {
-    val items: StateFlow<List<AppNotification>> = animalRepository.notifications()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun markRead(id: String) = animalRepository.markNotificationRead(id)
+class OpenShelterChatViewModel(private val container: AppContainer) : ViewModel() {
+    fun open(shelterId: String, shelterName: String, onReady: (String) -> Unit) {
+        viewModelScope.launch {
+            val id = container.chatRepository.openShelterChat(shelterId, shelterName)
+            onReady(id)
+        }
+    }
 }
 
-class ContentViewModel(private val animalRepository: AnimalRepository) : ViewModel() {
-    val shelters: List<Shelter> = animalRepository.shelters()
-    val clinics: List<Clinic> = animalRepository.clinics()
-    val donations: List<DonationOption> = animalRepository.donations()
-    val lostFound: StateFlow<List<LostFoundPost>> = animalRepository.lostFound()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+data class AdminUiState(
+    val applications: List<AdoptionApplication> = emptyList(),
+    val animals: List<Animal> = emptyList()
+)
+
+class AdminViewModel(private val container: AppContainer) : ViewModel() {
+    val ui: StateFlow<AdminUiState> = combine(
+        container.catalogRepository.allApplications,
+        container.catalogRepository.animals
+    ) { applications, animals ->
+        AdminUiState(applications, animals)
+    }.stateIn(viewModelScope, Share, AdminUiState())
+
+    val shelters: StateFlow<List<Shelter>> = container.catalogRepository.shelters
+        .stateIn(viewModelScope, Share, emptyList())
+
+    fun setApplicationStatus(id: String, status: ApplicationStatus) = viewModelScope.launch {
+        container.catalogRepository.setApplicationStatus(id, status)
+    }
+
+    fun setAnimalStatus(id: String, status: AnimalStatus) = viewModelScope.launch {
+        container.catalogRepository.setAnimalStatus(id, status)
+    }
 }
 
-class SplashViewModel(private val authRepository: AuthRepository) : ViewModel() {
-    val onboardingDone = authRepository.onboardingCompleted
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    val loggedIn = authRepository.isLoggedIn
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+data class AnimalEditorState(
+    val id: String = "",
+    val name: String = "",
+    val species: Species = Species.DOG,
+    val breed: String = "",
+    val ageMonths: String = "12",
+    val ageLabel: String = "",
+    val gender: Gender = Gender.MALE,
+    val size: PetSize = PetSize.MEDIUM,
+    val temperament: String = "",
+    val story: String = "",
+    val shelterId: String = "",
+    val city: String = "",
+    val imageKey: String = "animal_placeholder",
+    val status: AnimalStatus = AnimalStatus.AVAILABLE,
+    val error: String? = null,
+    val saved: Boolean = false
+)
 
-    fun completeOnboarding() = viewModelScope.launch { authRepository.completeOnboarding() }
+class AnimalEditorViewModel(
+    private val container: AppContainer,
+    private val animalId: String
+) : ViewModel() {
+    private val _state = MutableStateFlow(AnimalEditorState(id = if (animalId == "new") "" else animalId))
+    val state: StateFlow<AnimalEditorState> = _state.asStateFlow()
+    val shelters: StateFlow<List<Shelter>> = container.catalogRepository.shelters
+        .stateIn(viewModelScope, Share, emptyList())
+
+    init {
+        if (animalId != "new") {
+            viewModelScope.launch {
+                val animal = container.catalogRepository.observeAnimal(animalId).filterNotNull().first()
+                _state.value = AnimalEditorState(
+                    id = animal.id,
+                    name = animal.name,
+                    species = animal.species,
+                    breed = animal.breed,
+                    ageMonths = animal.ageMonths.toString(),
+                    ageLabel = animal.ageLabel,
+                    gender = animal.gender,
+                    size = animal.size,
+                    temperament = animal.temperament,
+                    story = animal.story,
+                    shelterId = animal.shelterId,
+                    city = animal.city,
+                    imageKey = animal.imageKey,
+                    status = animal.status
+                )
+            }
+        }
+    }
+
+    fun update(transform: (AnimalEditorState) -> AnimalEditorState) = _state.update(transform)
+
+    fun save() = viewModelScope.launch {
+        val form = _state.value
+        val months = form.ageMonths.toIntOrNull()
+        val shelter = shelters.value.find { it.id == form.shelterId }
+        val error = when {
+            form.name.trim().length < 2 -> "Укажите кличку."
+            form.breed.isBlank() -> "Укажите породу."
+            months == null || months <= 0 -> "Укажите возраст в месяцах."
+            form.ageLabel.isBlank() -> "Укажите возраст словами."
+            form.temperament.isBlank() -> "Опишите характер."
+            form.story.length < 10 -> "Добавьте историю животного."
+            shelter == null -> "Выберите приют."
+            else -> null
+        }
+        if (error != null || months == null || shelter == null) {
+            _state.update { it.copy(error = error ?: "Проверьте поля анкеты.") }
+            return@launch
+        }
+        val animal = Animal(
+            id = form.id.ifBlank { java.util.UUID.randomUUID().toString() },
+            name = form.name.trim(),
+            species = form.species,
+            breed = form.breed.trim(),
+            ageMonths = months,
+            ageLabel = form.ageLabel.trim(),
+            ageGroup = ageGroupOf(months),
+            gender = form.gender,
+            size = form.size,
+            temperament = form.temperament.trim(),
+            story = form.story.trim(),
+            shelterId = shelter.id,
+            shelterName = shelter.name,
+            city = shelter.city,
+            imageKey = form.imageKey.ifBlank { "animal_placeholder" },
+            status = form.status
+        )
+        container.catalogRepository.saveAnimal(animal)
+        _state.update { it.copy(error = null, saved = true, id = animal.id) }
+    }
+}
+
+class ApplicationDetailViewModel(container: AppContainer, id: String) : ViewModel() {
+    val application: StateFlow<AdoptionApplication?> = container.catalogRepository.observeApplication(id)
+        .stateIn(viewModelScope, Share, null)
 }
 
 @Suppress("UNCHECKED_CAST")
 class AdoptMeViewModelFactory(
     private val container: AppContainer,
-    private val animalId: String? = null,
-    private val animalName: String? = null
+    private val recordId: String = ""
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return when {
-            modelClass.isAssignableFrom(AuthViewModel::class.java) ->
-                AuthViewModel(container.authRepository) as T
-            modelClass.isAssignableFrom(HomeViewModel::class.java) ->
-                HomeViewModel(container.animalRepository, container.authRepository) as T
-            modelClass.isAssignableFrom(AnimalsViewModel::class.java) ->
-                AnimalsViewModel(container.animalRepository) as T
-            modelClass.isAssignableFrom(FavoritesViewModel::class.java) ->
-                FavoritesViewModel(container.animalRepository) as T
-            modelClass.isAssignableFrom(DetailsViewModel::class.java) ->
-                DetailsViewModel(container.animalRepository, animalId.orEmpty()) as T
-            modelClass.isAssignableFrom(ApplicationViewModel::class.java) ->
-                ApplicationViewModel(
-                    container.animalRepository,
-                    container.authRepository,
-                    animalId.orEmpty(),
-                    animalName.orEmpty()
-                ) as T
-            modelClass.isAssignableFrom(ProfileViewModel::class.java) ->
-                ProfileViewModel(container.authRepository, container.animalRepository) as T
-            modelClass.isAssignableFrom(NotificationsViewModel::class.java) ->
-                NotificationsViewModel(container.animalRepository) as T
-            modelClass.isAssignableFrom(ContentViewModel::class.java) ->
-                ContentViewModel(container.animalRepository) as T
-            modelClass.isAssignableFrom(SplashViewModel::class.java) ->
-                SplashViewModel(container.authRepository) as T
+        val model = when {
+            modelClass.isAssignableFrom(AuthViewModel::class.java) -> AuthViewModel(container)
+            modelClass.isAssignableFrom(HomeViewModel::class.java) -> HomeViewModel(container)
+            modelClass.isAssignableFrom(FavoritesViewModel::class.java) -> FavoritesViewModel(container)
+            modelClass.isAssignableFrom(DetailsViewModel::class.java) -> DetailsViewModel(container, recordId)
+            modelClass.isAssignableFrom(ApplicationViewModel::class.java) -> ApplicationViewModel(container, recordId)
+            modelClass.isAssignableFrom(MyApplicationsViewModel::class.java) -> MyApplicationsViewModel(container)
+            modelClass.isAssignableFrom(ShelterViewModel::class.java) -> ShelterViewModel(container)
+            modelClass.isAssignableFrom(ShelterDetailViewModel::class.java) -> ShelterDetailViewModel(container, recordId)
+            modelClass.isAssignableFrom(ProfileViewModel::class.java) -> ProfileViewModel(container)
+            modelClass.isAssignableFrom(NewsListViewModel::class.java) -> NewsListViewModel(container)
+            modelClass.isAssignableFrom(NewsDetailViewModel::class.java) -> NewsDetailViewModel(container, recordId)
+            modelClass.isAssignableFrom(ChatListViewModel::class.java) -> ChatListViewModel(container)
+            modelClass.isAssignableFrom(ChatThreadViewModel::class.java) -> ChatThreadViewModel(container, recordId)
+            modelClass.isAssignableFrom(OpenShelterChatViewModel::class.java) -> OpenShelterChatViewModel(container)
+            modelClass.isAssignableFrom(AdminViewModel::class.java) -> AdminViewModel(container)
+            modelClass.isAssignableFrom(AnimalEditorViewModel::class.java) -> AnimalEditorViewModel(container, recordId)
+            modelClass.isAssignableFrom(ApplicationDetailViewModel::class.java) -> ApplicationDetailViewModel(container, recordId)
             else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
         }
+        return model as T
     }
 }

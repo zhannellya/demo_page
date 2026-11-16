@@ -11,5 +11,6 @@ app/build
 google-services.json
 .kotlin/
 *.apk
+!artifacts/adoptme-debug.apk
 .idea/
 captures/

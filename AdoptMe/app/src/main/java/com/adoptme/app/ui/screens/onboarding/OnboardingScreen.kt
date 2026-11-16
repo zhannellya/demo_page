@@ -1,30 +1,22 @@
 package com.adoptme.app.ui.screens.onboarding
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -36,51 +28,54 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.adoptme.app.data.local.SampleData
+import com.adoptme.app.R
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.GradientButton
 import com.adoptme.app.ui.components.PageIndicator
 import com.adoptme.app.ui.components.SoftBackground
-import com.adoptme.app.ui.theme.LilacCard
-import com.adoptme.app.ui.theme.PinkNeon
-import com.adoptme.app.ui.theme.PurplePrimary
 import com.adoptme.app.ui.theme.TextSecondary
 import com.adoptme.app.ui.theme.White
 import kotlinx.coroutines.launch
 
+private data class WelcomePage(val title: String, val description: String, val imageRes: Int)
+
+private val pages = listOf(
+    WelcomePage(
+        title = "Рядом кто-то ждёт",
+        description = "ADOPTME помогает найти кошку или собаку из приюта и познакомиться с её историей.",
+        imageRes = R.drawable.onboarding_cat
+    ),
+    WelcomePage(
+        title = "Сначала узнайте друг друга",
+        description = "В анкете есть возраст, порода, характер и приют. Заявку можно отправить прямо из карточки.",
+        imageRes = R.drawable.onboarding_dog
+    ),
+    WelcomePage(
+        title = "Дом начинается с заботы",
+        description = "Сохраняйте избранное, следите за статусом заявки и пишите приюту в демонстрационном чате.",
+        imageRes = R.drawable.onboarding_friends
+    )
+)
+
 @Composable
-fun OnboardingScreen(
-    onFinished: () -> Unit
-) {
-    val pages = SampleData.onboardingPages
+fun WelcomeScreen(onFinished: () -> Unit) {
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
     val container = LocalAppContainer.current
+    val lastPage = pagerState.currentPage == pages.lastIndex
 
     SoftBackground {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = {
-                    scope.launch {
-                        container.authRepository.completeOnboarding()
-                        onFinished()
-                    }
-                }) {
-                    Text("Skip", color = PurplePrimary, fontWeight = FontWeight.SemiBold)
-                }
-            }
-
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
                     .weight(1f)
+                    .widthIn(max = 560.dp)
                     .fillMaxWidth()
             ) { page ->
                 val item = pages[page]
@@ -91,14 +86,9 @@ fun OnboardingScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(280.dp)
-                            .shadow(
-                                24.dp,
-                                RoundedCornerShape(40.dp),
-                                ambientColor = PurplePrimary.copy(0.25f),
-                                spotColor = PinkNeon.copy(0.35f)
-                            )
-                            .clip(RoundedCornerShape(40.dp))
+                            .size(240.dp)
+                            .shadow(16.dp, CircleShape)
+                            .clip(CircleShape)
                             .background(White),
                         contentAlignment = Alignment.Center
                     ) {
@@ -109,67 +99,39 @@ fun OnboardingScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-
-                    Spacer(Modifier.height(36.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .shadow(12.dp, RoundedCornerShape(32.dp), ambientColor = PurplePrimary.copy(0.12f))
-                            .clip(RoundedCornerShape(32.dp))
-                            .background(LilacCard)
-                            .padding(horizontal = 24.dp, vertical = 28.dp)
-                    ) {
-                        AnimatedContent(
-                            targetState = page,
-                            transitionSpec = {
-                                (fadeIn() + slideInHorizontally { it / 4 }) togetherWith
-                                    (fadeOut() + slideOutHorizontally { -it / 4 })
-                            },
-                            label = "onboardingText"
-                        ) { p ->
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = pages[p].title,
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    textAlign = TextAlign.Center,
-                                    color = PurplePrimary
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    text = pages[p].description,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textAlign = TextAlign.Center,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                    }
+                    Spacer(Modifier.height(28.dp))
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = item.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
-
-            PageIndicator(
-                pageCount = pages.size,
-                currentPage = pagerState.currentPage,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(vertical = 20.dp)
-            )
-
+            PageIndicator(pageCount = pages.size, currentPage = pagerState.currentPage)
+            Spacer(Modifier.height(20.dp))
             GradientButton(
-                text = if (pagerState.currentPage == pages.lastIndex) "Get Started" else "Next",
+                text = if (lastPage) "Начать" else "Далее",
+                modifier = Modifier.widthIn(max = 560.dp),
                 onClick = {
-                    scope.launch {
-                        if (pagerState.currentPage < pages.lastIndex) {
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                        } else {
+                    if (lastPage) {
+                        scope.launch {
                             container.authRepository.completeOnboarding()
                             onFinished()
                         }
+                    } else {
+                        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                     }
                 }
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 }

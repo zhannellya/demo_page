@@ -1,59 +1,100 @@
-# AdoptMe
+# ADOPTME — Приюты животных
 
-Modern Android pet adoption app for animal shelters — Kotlin, Jetpack Compose, Material 3, MVVM.
+Мобильное приложение на Kotlin и Jetpack Compose: каталог животных, заявки на усыновление, избранное, приюты, локальный чат и панель администратора. Данные сохраняются на устройстве.
 
-## Design
+Макет Figma по ссылке из задания в этой среде не открывался. Интерфейс собран по указанной палитре (`#F5C9F2`, `#6F4F84`, `#311E49`, `#43145D`) и белым карточкам. Фотографии животных скачаны с Unsplash и лежат в приложении, поэтому каталог открывается без интернета. Приветственные иллюстрации проекта сохранены.
 
-- Elegant purple & lavender palette with pink / cyan neon accents
-- Soft gradient backgrounds, large rounded white cards, purple gradient CTAs
-- Cute 3D onboarding illustrations
-- Bottom navigation: Home · Animals · Favorites · Map · Profile
+## Как открыть
 
-## Screens
+1. Установите Android Studio (Ladybug или новее) и Android SDK 35.
+2. Откройте папку `AdoptMe` (именно её, не корень репозитория).
+3. Дождитесь Gradle Sync. Используются AGP 8.7.3, Kotlin 2.0.21, Gradle 8.9, Compose BOM 2024.10.01, Room 2.6.1.
+4. Если SDK не подхватился, создайте `AdoptMe/local.properties` со строкой `sdk.dir=/путь/к/Android/Sdk`.
+5. Запустите конфигурацию `app` на эмуляторе или устройстве с API 26+.
 
-1. Splash  
-2. Onboarding (3 slides)  
-3. Sign Up / Login  
-4. Home (search, categories, recommendations, quick actions)  
-5. Animals (search + filter)  
-6. Animal Details + Adopt  
-7. Favorites  
-8. Adoption Application (validated form)  
-9. Lost & Found  
-10. Help & Donate  
-11. Veterinary  
-12. Map (shelter markers + list)  
-13. Profile (history + logout)  
-14. Notifications  
+Сборка, которая проходила в этой среде:
 
-## Open in Android Studio
+```bash
+cd AdoptMe
+./gradlew :app:assembleDebug :app:testDebugUnitTest
+```
 
-1. Open the `AdoptMe` folder in Android Studio (Ladybug / Koala or newer).
-2. Let Gradle sync (AGP 8.7, Kotlin 2.0, Compose BOM 2024.10).
-3. Set `sdk.dir` in `local.properties` if needed.
-4. Run on an emulator or device (minSdk 26).
+Готовый debug APK: `AdoptMe/artifacts/adoptme-debug.apk`.
 
-## Firebase (optional)
+## Демонстрационный вход
 
-The app works fully offline with local DataStore + sample data.
+Приложение явно работает в демонстрационном режиме. Пароль не хранится открытым текстом: в Room лежит соль и PBKDF2-хеш.
 
-To enable Firebase Auth:
+Локальный администратор, чтобы проверить смену статуса заявки:
 
-1. Create a Firebase project and add an Android app with package `com.adoptme.app`.
-2. Download `google-services.json` into `AdoptMe/app/`.
-3. Sync Gradle — the Google Services plugin applies automatically when the file is present.
+- email: `admin@adoptme.local`
+- пароль: `Admin12345`
 
-## Package structure
+Это локальная роль в базе устройства. Она не является серверной авторизацией и не защищает данные от того, у кого есть доступ к телефону.
+
+Обычный пользователь регистрируется на экране «Регистрация». Аккаунт тоже остаётся только на устройстве.
+
+## Карта
+
+Google Maps подключается, если в `local.properties` есть ключ:
+
+```properties
+MAPS_API_KEY=ваш_ключ
+```
+
+Ключ попадает в `BuildConfig` и в манифест как `${MAPS_API_KEY}`. В репозиторий его класть не нужно. Без ключа или без сервисов Google Play экран приютов показывает список и пояснение, приложение не падает.
+
+У демонстрационных приютов координаты пустые. Приложение не рисует вымышленные точки как адреса приютов. Метка появится только у записи, у которой заполнены широта и долгота.
+
+## Firebase
+
+Серверная авторизация не подключена. Точки расширения лежат в `com.adoptme.app.remote`: `AuthRemoteDataSource` и `CatalogRemoteDataSource`. Туда можно добавить Firebase Authentication и Firestore, когда появятся `google-services.json` и правила безопасности. Пока подставлены пустые реализации, поэтому отсутствие интернета не мешает каталогу, заявкам и избранному.
+
+Платежей в приложении нет.
+
+## Сценарий
+
+1. Три приветственных экрана, на первом — котёнок. Кнопки «Далее» и «Начать».
+2. Вход или регистрация с проверкой полей.
+3. Каталог: поиск по кличке и фильтры по виду, возрасту, размеру, полу и городу.
+4. Карточка животного: фото или слот изображения, возраст, порода, размер, пол, характер, история, приют.
+5. Заявка с уже выбранным животным. Повторное нажатие и вторая ожидающая заявка на то же животное не создают дубликат.
+6. «Мои заявки»: номер, животное, дата, статус «На рассмотрении», «Одобрено», «Отклонено» или «Отменена». Ожидающую заявку можно отменить.
+7. Администратор открывает заявку и меняет статус. Пользователь видит новое значение, потому что список читается из Room.
+8. Избранное, чаты и заявки остаются после закрытия приложения.
+
+Стартовые животные: Шарик, Тоша, Белла, Барсик, Бобик, Дружок, Рекс, Макс. У каждого свои возраст, порода, город, характер и история.
+
+## Структура
 
 ```
-com.adoptme.app
+AdoptMe/app/src/main/java/com/adoptme/app
+├── data/local          Room, DataStore, начальные записи
+├── data/repository     каталог, авторизация, чат, заявки
 ├── data/model
-├── data/local
-├── data/repository
-├── di
-├── ui/theme
-├── ui/components
+├── remote              заготовки Firebase
 ├── ui/navigation
-├── ui/screens/*
-└── viewmodel
+├── ui/screens
+├── ui/components
+├── ui/theme
+├── viewmodel
+└── utils               проверка форм, фильтры, хеш пароля
 ```
+
+## Что реализовано
+
+- Kotlin, Jetpack Compose, Material 3, MVVM, Navigation Compose, Room, DataStore, Coroutines, StateFlow, Gradle Kotlin DSL.
+- Приветствие, вход, регистрация, каталог, карточка, заявка, мои заявки, избранное, приюты, чат, профиль, настройки, новости, помощь, администратор.
+- Нижняя панель: Главная, Избранное, Приюты, Чаты, Профиль.
+- Сетка каталога подстраивается под ширину экрана.
+- Интерфейс на русском языке.
+- Тесты форм, поиска, хеша пароля, защиты от повторной заявки и повторного открытия базы Room.
+
+## Ограничения
+
+- Нет сервера, Firebase и настоящих push-уведомлений.
+- Чат отвечает локальной заготовкой и не доходит до приюта.
+- Роль администратора локальная.
+- У приютов нет проверенных координат, поэтому на карте нет меток, пока ключ Maps и координаты не заданы отдельно.
+- Фотографии животных встроены в приложение (Unsplash). Приветственные экраны по-прежнему используют иллюстрации проекта. Оригинальные кадры из Figma сюда не переносились.
+- Сборка и unit-тесты запускались через Gradle. Установка на эмулятор или телефон в этой среде не выполнялась.
