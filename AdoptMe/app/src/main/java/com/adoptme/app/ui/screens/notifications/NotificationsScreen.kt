@@ -44,9 +44,9 @@ fun NotificationsScreen(onBack: () -> Unit) {
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = "Notifications", onBack = onBack)
+            ScreenHeader(title = "Уведомления", onBack = onBack)
             if (items.isEmpty()) {
-                EmptyState("You're all caught up", "Application updates will appear here.")
+                EmptyState("Пока тихо", "Здесь появятся новости о заявках.")
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(20.dp),

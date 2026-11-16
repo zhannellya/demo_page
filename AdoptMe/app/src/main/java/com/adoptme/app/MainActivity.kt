@@ -11,7 +11,8 @@ import androidx.compose.ui.Modifier
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.navigation.AdoptMeNavHost
 import com.adoptme.app.ui.theme.AdoptMeTheme
-import com.adoptme.app.ui.theme.LavenderBg
+import com.adoptme.app.ui.theme.Plum
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,7 +24,7 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalAppContainer provides app.container) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = LavenderBg
+                        color = Plum
                     ) {
                         AdoptMeNavHost()
                     }

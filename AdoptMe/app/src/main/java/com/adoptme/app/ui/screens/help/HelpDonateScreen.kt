@@ -25,6 +25,7 @@ import com.adoptme.app.ui.components.AdoptMeCard
 import com.adoptme.app.ui.components.GradientButton
 import com.adoptme.app.ui.components.ScreenHeader
 import com.adoptme.app.ui.components.SoftBackground
+import com.adoptme.app.ui.theme.Blush
 import com.adoptme.app.ui.theme.PurplePrimary
 import com.adoptme.app.ui.theme.TextSecondary
 import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
@@ -40,7 +41,7 @@ fun HelpDonateScreen(onBack: () -> Unit) {
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = "Help & Donate", onBack = onBack)
+            ScreenHeader(title = "Помощь приютам", onBack = onBack)
             LazyColumn(
                 contentPadding = PaddingValues(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -48,9 +49,9 @@ fun HelpDonateScreen(onBack: () -> Unit) {
             ) {
                 item {
                     Text(
-                        "Every gift helps shelter pets eat, heal, and find homes.",
+                        "Каждая помощь кормит, лечит и приближает питомца к дому.",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary
+                        color = Blush
                     )
                     Spacer(Modifier.height(8.dp))
                 }
@@ -64,14 +65,14 @@ fun HelpDonateScreen(onBack: () -> Unit) {
                             Text(option.amountLabel, style = MaterialTheme.typography.headlineSmall)
                             Spacer(Modifier.height(12.dp))
                             GradientButton(
-                                text = if (option.icon == "volunteer") "Join as volunteer" else "Donate ${option.amountLabel}",
+                                text = if (option.icon == "volunteer") "Стать волонтёром" else "Помочь на ${option.amountLabel}",
                                 onClick = {
                                     scope.launch {
                                         snackbar.showSnackbar(
                                             if (option.icon == "volunteer")
-                                                "Thanks! We'll contact you about volunteer shifts."
+                                                "Спасибо! Приют свяжется с вами по поводу смен."
                                             else
-                                                "Thank you for supporting AdoptMe pets!"
+                                                "Спасибо, что поддерживаете питомцев ADOPTME!"
                                         )
                                     }
                                 }

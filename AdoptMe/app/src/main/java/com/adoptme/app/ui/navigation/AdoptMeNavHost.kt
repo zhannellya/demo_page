@@ -5,19 +5,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Pets
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -26,10 +23,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -37,9 +38,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.adoptme.app.ui.screens.application.AdoptionApplicationScreen
-import com.adoptme.app.ui.screens.animals.AnimalsScreen
+import com.adoptme.app.ui.screens.applications.ApplicationsScreen
 import com.adoptme.app.ui.screens.auth.LoginScreen
-import com.adoptme.app.ui.screens.auth.SignUpScreen
+import com.adoptme.app.ui.screens.auth.RegisterScreen
 import com.adoptme.app.ui.screens.details.AnimalDetailsScreen
 import com.adoptme.app.ui.screens.favorites.FavoritesScreen
 import com.adoptme.app.ui.screens.help.HelpDonateScreen
@@ -47,16 +48,16 @@ import com.adoptme.app.ui.screens.home.HomeScreen
 import com.adoptme.app.ui.screens.lostfound.LostFoundScreen
 import com.adoptme.app.ui.screens.map.MapScreen
 import com.adoptme.app.ui.screens.notifications.NotificationsScreen
-import com.adoptme.app.ui.screens.onboarding.OnboardingScreen
 import com.adoptme.app.ui.screens.profile.ProfileScreen
+import com.adoptme.app.ui.screens.search.SearchScreen
 import com.adoptme.app.ui.screens.splash.SplashScreen
 import com.adoptme.app.ui.screens.veterinary.VeterinaryScreen
+import com.adoptme.app.ui.screens.welcome.WelcomeScreen
+import com.adoptme.app.ui.theme.Blush
 import com.adoptme.app.ui.theme.BottomBarShape
 import com.adoptme.app.ui.theme.LilacCard
-import com.adoptme.app.ui.theme.PinkNeon
-import com.adoptme.app.ui.theme.PurplePrimary
+import com.adoptme.app.ui.theme.Plum
 import com.adoptme.app.ui.theme.TextMuted
-import java.net.URLDecoder
 
 private data class BottomItem(
     val route: String,
@@ -64,6 +65,14 @@ private data class BottomItem(
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 )
+
+private fun NavHostController.openTab(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
 
 @Composable
 fun AdoptMeNavHost() {
@@ -73,11 +82,11 @@ fun AdoptMeNavHost() {
     val showBottomBar = currentRoute in bottomBarRoutes
 
     val bottomItems = listOf(
-        BottomItem(Route.Home.path, "Home", Icons.Filled.Home, Icons.Outlined.Home),
-        BottomItem(Route.Animals.path, "Animals", Icons.Filled.Pets, Icons.Outlined.Pets),
-        BottomItem(Route.Favorites.path, "Favorites", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
-        BottomItem(Route.Map.path, "Map", Icons.Filled.Map, Icons.Outlined.Map),
-        BottomItem(Route.Profile.path, "Profile", Icons.Filled.Person, Icons.Outlined.Person)
+        BottomItem(Route.Home.path, "Главная", Icons.Filled.Home, Icons.Outlined.Home),
+        BottomItem(Route.Search.path, "Поиск", Icons.Filled.Search, Icons.Outlined.Search),
+        BottomItem(Route.Favorites.path, "Избранное", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
+        BottomItem(Route.Applications.path, "Заявки", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Outlined.Assignment),
+        BottomItem(Route.Profile.path, "Профиль", Icons.Filled.Person, Icons.Outlined.Person)
     )
 
     Scaffold(
@@ -93,24 +102,16 @@ fun AdoptMeNavHost() {
                         val selected = currentRoute == item.route
                         NavigationBarItem(
                             selected = selected,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { navController.openTab(item.route) },
                             icon = {
                                 if (selected) {
                                     Box(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .background(PurplePrimary.copy(0.12f), CircleShape),
+                                            .size(36.dp)
+                                            .background(Plum.copy(alpha = 0.12f), CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(item.selectedIcon, contentDescription = item.label, tint = PurplePrimary)
+                                        Icon(item.selectedIcon, contentDescription = item.label, tint = Plum)
                                     }
                                 } else {
                                     Icon(item.unselectedIcon, contentDescription = item.label, tint = TextMuted)
@@ -118,12 +119,14 @@ fun AdoptMeNavHost() {
                             },
                             label = {
                                 Text(
-                                    item.label,
-                                    color = if (selected) PurplePrimary else TextMuted
+                                    text = item.label,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = if (selected) Plum else TextMuted
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = PinkNeon.copy(alpha = 0.08f)
+                                indicatorColor = Blush.copy(alpha = 0.65f)
                             )
                         )
                     }
@@ -137,81 +140,81 @@ fun AdoptMeNavHost() {
             modifier = Modifier.padding(padding)
         ) {
             composable(Route.Splash.path) {
-                SplashScreen { onboardingDone, loggedIn ->
-                    val target = when {
-                        !onboardingDone -> Route.Onboarding.path
-                        !loggedIn -> Route.SignUp.path
-                        else -> Route.Home.path
-                    }
-                    navController.navigate(target) {
+                SplashScreen { loggedIn ->
+                    navController.navigate(if (loggedIn) Route.Home.path else Route.Welcome.path) {
                         popUpTo(Route.Splash.path) { inclusive = true }
                     }
                 }
             }
-            composable(Route.Onboarding.path) {
-                OnboardingScreen {
-                    navController.navigate(Route.SignUp.path) {
-                        popUpTo(Route.Onboarding.path) { inclusive = true }
-                    }
-                }
+            composable(Route.Welcome.path) {
+                WelcomeScreen(
+                    onLogin = { navController.navigate(Route.Login.path) },
+                    onRegister = { navController.navigate(Route.Register.path) }
+                )
             }
-            composable(Route.SignUp.path) {
-                SignUpScreen(
-                    onSignedUp = {
+            composable(Route.Register.path) {
+                RegisterScreen(
+                    onRegistered = {
                         navController.navigate(Route.Home.path) {
-                            popUpTo(Route.SignUp.path) { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                         }
                     },
-                    onGoLogin = { navController.navigate(Route.Login.path) }
+                    onGoLogin = {
+                        if (!navController.popBackStack(Route.Login.path, inclusive = false)) {
+                            navController.navigate(Route.Login.path)
+                        }
+                    }
                 )
             }
             composable(Route.Login.path) {
                 LoginScreen(
                     onLoggedIn = {
                         navController.navigate(Route.Home.path) {
-                            popUpTo(Route.Login.path) { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                         }
                     },
-                    onGoSignUp = { navController.popBackStack() }
+                    onGoRegister = { navController.navigate(Route.Register.path) }
                 )
             }
             composable(Route.Home.path) {
                 HomeScreen(
                     onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) },
-                    onSeeAll = {
-                        navController.navigate(Route.Animals.path) {
-                            launchSingleTop = true
-                        }
-                    },
+                    onSeeAll = { navController.openTab(Route.Search.path) },
                     onNotifications = { navController.navigate(Route.Notifications.path) },
                     onLostFound = { navController.navigate(Route.LostFound.path) },
                     onHelp = { navController.navigate(Route.HelpDonate.path) },
                     onVeterinary = { navController.navigate(Route.Veterinary.path) }
                 )
             }
-            composable(Route.Animals.path) {
-                AnimalsScreen(onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) })
+            composable(Route.Search.path) {
+                SearchScreen(onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) })
             }
             composable(Route.Favorites.path) {
                 FavoritesScreen(
                     onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) },
-                    onBrowse = {
-                        navController.navigate(Route.Animals.path) { launchSingleTop = true }
-                    }
+                    onBrowse = { navController.openTab(Route.Search.path) }
                 )
             }
-            composable(Route.Map.path) { MapScreen() }
+            composable(Route.Applications.path) {
+                ApplicationsScreen(
+                    onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) },
+                    onBrowse = { navController.openTab(Route.Search.path) }
+                )
+            }
+            composable(Route.Map.path) { MapScreen(onBack = { navController.popBackStack() }) }
             composable(Route.Profile.path) {
                 ProfileScreen(
                     onLogout = {
-                        navController.navigate(Route.Login.path) {
+                        navController.navigate(Route.Welcome.path) {
                             popUpTo(0) { inclusive = true }
                         }
                     },
+                    onApplications = { navController.openTab(Route.Applications.path) },
                     onNotifications = { navController.navigate(Route.Notifications.path) },
                     onHelp = { navController.navigate(Route.HelpDonate.path) },
                     onLostFound = { navController.navigate(Route.LostFound.path) },
-                    onVeterinary = { navController.navigate(Route.Veterinary.path) }
+                    onVeterinary = { navController.navigate(Route.Veterinary.path) },
+                    onMap = { navController.navigate(Route.Map.path) }
                 )
             }
             composable(
@@ -235,16 +238,12 @@ fun AdoptMeNavHost() {
                 )
             ) { entry ->
                 val id = entry.arguments?.getString("animalId").orEmpty()
-                val name = URLDecoder.decode(entry.arguments?.getString("animalName").orEmpty(), "UTF-8")
+                val name = entry.arguments?.getString("animalName").orEmpty()
                 AdoptionApplicationScreen(
                     animalId = id,
                     animalName = name,
                     onBack = { navController.popBackStack() },
-                    onSubmitted = {
-                        navController.navigate(Route.Profile.path) {
-                            popUpTo(Route.Home.path)
-                        }
-                    }
+                    onSubmitted = { navController.openTab(Route.Applications.path) }
                 )
             }
             composable(Route.LostFound.path) {

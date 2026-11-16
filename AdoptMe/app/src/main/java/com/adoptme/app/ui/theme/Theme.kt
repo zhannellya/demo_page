@@ -10,21 +10,21 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val AdoptMeColorScheme = lightColorScheme(
-    primary = PurplePrimary,
+    primary = Mauve,
     onPrimary = White,
-    primaryContainer = LavenderMist,
-    onPrimaryContainer = TextPrimary,
-    secondary = PinkNeon,
+    primaryContainer = Blush,
+    onPrimaryContainer = Plum,
+    secondary = Plum,
     onSecondary = White,
-    secondaryContainer = PinkSoft.copy(alpha = 0.35f),
-    onSecondaryContainer = TextPrimary,
-    tertiary = CyanNeon,
-    onTertiary = TextPrimary,
-    tertiaryContainer = CyanSoft.copy(alpha = 0.4f),
+    secondaryContainer = LavenderMist,
+    onSecondaryContainer = Plum,
+    tertiary = PinkNeon,
+    onTertiary = White,
+    tertiaryContainer = Blush,
     background = LavenderBg,
-    onBackground = TextPrimary,
+    onBackground = Plum,
     surface = LilacCard,
-    onSurface = TextPrimary,
+    onSurface = Plum,
     surfaceVariant = LavenderMist,
     onSurfaceVariant = TextSecondary,
     outline = DividerSoft,
@@ -38,9 +38,11 @@ fun AdoptMeTheme(content: @Composable () -> Unit) {
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = LavenderBg.toArgb()
+            window.statusBarColor = Plum.toArgb()
             window.navigationBarColor = LilacCard.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = true
         }
     }
 

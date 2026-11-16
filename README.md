@@ -1,7 +1,7 @@
-# AdoptMe
+# ADOPTME — Приюты животных
 
-Android pet adoption app (Kotlin · Jetpack Compose · Material 3 · MVVM).
+Android-приложение на Kotlin и Jetpack Compose: приюты, избранное, поиск и заявки на усыновление.
 
-Open the **`AdoptMe/`** folder in Android Studio and run on an emulator or device (minSdk 26).
+Откройте папку **`AdoptMe/`** в Android Studio и запустите модуль `app` на эмуляторе или телефоне (minSdk 26).
 
-See [`AdoptMe/README.md`](AdoptMe/README.md) for screens, Firebase setup, and package structure.
+Подробности, офлайн-вход и сборка `gradlew.bat assembleDebug` — в [`AdoptMe/README.md`](AdoptMe/README.md).

@@ -1,13 +1,15 @@
 package com.adoptme.app.ui.screens.application
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
@@ -33,7 +35,6 @@ import com.adoptme.app.ui.components.ScreenHeader
 import com.adoptme.app.ui.components.SoftBackground
 import com.adoptme.app.ui.theme.ErrorRose
 import com.adoptme.app.ui.theme.PurplePrimary
-import com.adoptme.app.ui.theme.SuccessGreen
 import com.adoptme.app.ui.theme.TextSecondary
 import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
 import com.adoptme.app.viewmodel.ApplicationViewModel
@@ -58,23 +59,23 @@ fun AdoptionApplicationScreen(
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = "Adoption form", onBack = onBack)
+            ScreenHeader(title = "Заявка на усыновление", onBack = onBack)
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
             ) {
-                Text("Applying for $animalName", style = MaterialTheme.typography.titleLarge, color = PurplePrimary)
+                Text("Заявка на $animalName", style = MaterialTheme.typography.titleLarge, color = PurplePrimary)
                 Spacer(Modifier.height(6.dp))
-                Text("Please complete the form carefully. Shelter teams review every application.", color = TextSecondary)
+                Text("Заполните анкету. Приют увидит её в истории ваших заявок, данные сохраняются на устройстве.", color = TextSecondary)
                 Spacer(Modifier.height(16.dp))
                 AdoptMeCard {
                     Column(modifier = Modifier.padding(20.dp)) {
                         AdoptTextField(
                             value = form.fullName,
                             onValueChange = { vm.update { s -> s.copy(fullName = it, error = null) } },
-                            label = "Full name"
+                            label = "Имя"
                         )
                         Spacer(Modifier.height(10.dp))
                         AdoptTextField(
@@ -87,20 +88,23 @@ fun AdoptionApplicationScreen(
                         AdoptTextField(
                             value = form.phone,
                             onValueChange = { vm.update { s -> s.copy(phone = it, error = null) } },
-                            label = "Phone",
+                            label = "Телефон",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next)
                         )
                         Spacer(Modifier.height(10.dp))
                         AdoptTextField(
                             value = form.address,
                             onValueChange = { vm.update { s -> s.copy(address = it, error = null) } },
-                            label = "Address"
+                            label = "Адрес"
                         )
                         Spacer(Modifier.height(14.dp))
-                        Text("Housing type", style = MaterialTheme.typography.titleSmall)
+                        Text("Жильё", style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                            listOf("Apartment", "House", "Shared").forEach { type ->
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("Квартира", "Дом", "Общее жильё").forEach { type ->
                                 CategoryChip(
                                     label = type,
                                     selected = form.housingType == type,
@@ -115,20 +119,22 @@ fun AdoptionApplicationScreen(
                                 onCheckedChange = { checked -> vm.update { s -> s.copy(hasOtherPets = checked) } },
                                 colors = CheckboxDefaults.colors(checkedColor = PurplePrimary)
                             )
-                            Text("I already have other pets")
+                            Text("У меня уже есть животные")
                         }
                         AdoptTextField(
                             value = form.experience,
                             onValueChange = { vm.update { s -> s.copy(experience = it) } },
-                            label = "Pet experience",
-                            singleLine = false
+                            label = "Опыт содержания",
+                            singleLine = false,
+                            minLines = 3
                         )
                         Spacer(Modifier.height(10.dp))
                         AdoptTextField(
                             value = form.reason,
                             onValueChange = { vm.update { s -> s.copy(reason = it, error = null) } },
-                            label = "Why do you want to adopt?",
-                            singleLine = false
+                            label = "Почему хотите усыновить?",
+                            singleLine = false,
+                            minLines = 3
                         )
                         form.error?.let {
                             Spacer(Modifier.height(8.dp))
@@ -137,7 +143,7 @@ fun AdoptionApplicationScreen(
                     }
                 }
                 Spacer(Modifier.height(20.dp))
-                GradientButton("Submit application", onClick = vm::submit, loading = form.loading)
+                GradientButton("Отправить заявку", onClick = vm::submit, loading = form.loading)
                 Spacer(Modifier.height(24.dp))
             }
         }

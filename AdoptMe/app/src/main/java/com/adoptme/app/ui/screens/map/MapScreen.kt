@@ -39,14 +39,14 @@ import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
 import com.adoptme.app.viewmodel.ContentViewModel
 
 @Composable
-fun MapScreen() {
+fun MapScreen(onBack: (() -> Unit)? = null) {
     val container = LocalAppContainer.current
     val vm: ContentViewModel = viewModel(factory = AdoptMeViewModelFactory(container))
     val shelters = vm.shelters
 
     SoftBackground {
-        Column(modifier = Modifier.fillMaxSize().padding(bottom = 88.dp)) {
-            ScreenHeader(title = "Shelters map")
+        Column(modifier = Modifier.fillMaxSize()) {
+            ScreenHeader(title = "Приюты", onBack = onBack)
             Box(
                 modifier = Modifier
                     .padding(horizontal = 20.dp)
@@ -82,7 +82,7 @@ fun MapScreen() {
                     }
                 }
                 Text(
-                    "Almaty shelters",
+                    "Приюты ADOPTME",
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(16.dp),
@@ -102,7 +102,7 @@ fun MapScreen() {
                             Spacer(Modifier.height(4.dp))
                             Text(shelter.address, color = TextSecondary)
                             Text(shelter.phone, style = MaterialTheme.typography.titleSmall)
-                            Text("Open ${shelter.openHours}", color = CyanNeon, style = MaterialTheme.typography.labelMedium)
+                            Text("Открыто ${shelter.openHours}", color = CyanNeon, style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }

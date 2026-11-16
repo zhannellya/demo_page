@@ -33,7 +33,7 @@ fun VeterinaryScreen(onBack: () -> Unit) {
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = "Veterinary", onBack = onBack)
+            ScreenHeader(title = "Ветеринар", onBack = onBack)
             LazyColumn(
                 contentPadding = PaddingValues(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -41,10 +41,10 @@ fun VeterinaryScreen(onBack: () -> Unit) {
                 item {
                     AdoptMeCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            Text("Care tips", style = MaterialTheme.typography.titleLarge, color = PurplePrimary)
+                            Text("Советы по уходу", style = MaterialTheme.typography.titleLarge, color = PurplePrimary)
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Keep vaccines up to date, schedule annual checkups, and ask shelters about each pet’s medical history before adoption.",
+                                "Следите за прививками, проходите ежегодный осмотр и уточняйте в приюте медицинскую историю до усыновления.",
                                 color = TextSecondary
                             )
                         }
@@ -60,7 +60,7 @@ fun VeterinaryScreen(onBack: () -> Unit) {
                             Text(clinic.address, color = TextSecondary)
                             Text(clinic.phone, style = MaterialTheme.typography.titleSmall)
                             Spacer(Modifier.height(4.dp))
-                            Text("Rating ${clinic.rating} ★", color = PurplePrimary)
+                            Text("Оценка ${clinic.rating} ★", color = PurplePrimary)
                         }
                     }
                 }

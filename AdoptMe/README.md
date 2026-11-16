@@ -1,59 +1,54 @@
-# AdoptMe
+# ADOPTME — Приюты животных
 
-Modern Android pet adoption app for animal shelters — Kotlin, Jetpack Compose, Material 3, MVVM.
+Мобильное приложение для знакомства с кошками и собаками из приютов, сохранения избранного и отправки заявок на усыновление.
 
-## Design
+Стек: Kotlin, Jetpack Compose, Material 3, MVVM, Navigation Compose, Room, DataStore, Coroutines, Gradle Kotlin DSL.
 
-- Elegant purple & lavender palette with pink / cyan neon accents
-- Soft gradient backgrounds, large rounded white cards, purple gradient CTAs
-- Cute 3D onboarding illustrations
-- Bottom navigation: Home · Animals · Favorites · Map · Profile
+## Как открыть в Android Studio на Windows
 
-## Screens
+1. Установите Android Studio Ladybug или новее и Android SDK 35.
+2. Установите JDK 17 (Android Studio обычно ставит его сама).
+3. Откройте папку `AdoptMe` через **File → Open**. Не открывайте корень репозитория, если рядом есть другие файлы: Gradle-проект — это каталог `AdoptMe`.
+4. Дождитесь синхронизации Gradle (AGP 8.7.3, Kotlin 2.0.21, Compose BOM 2024.10.01, Room 2.6.1).
+5. Если Studio попросит SDK, создайте `AdoptMe/local.properties` со строкой `sdk.dir=C:\\Users\\<you>\\AppData\\Local\\Android\\Sdk`.
+6. Запустите конфигурацию `app` на эмуляторе или телефоне с Android 8.0+ (minSdk 26).
 
-1. Splash  
-2. Onboarding (3 slides)  
-3. Sign Up / Login  
-4. Home (search, categories, recommendations, quick actions)  
-5. Animals (search + filter)  
-6. Animal Details + Adopt  
-7. Favorites  
-8. Adoption Application (validated form)  
-9. Lost & Found  
-10. Help & Donate  
-11. Veterinary  
-12. Map (shelter markers + list)  
-13. Profile (history + logout)  
-14. Notifications  
+Сборка из командной строки:
 
-## Open in Android Studio
-
-1. Open the `AdoptMe` folder in Android Studio (Ladybug / Koala or newer).
-2. Let Gradle sync (AGP 8.7, Kotlin 2.0, Compose BOM 2024.10).
-3. Set `sdk.dir` in `local.properties` if needed.
-4. Run on an emulator or device (minSdk 26).
-
-## Firebase (optional)
-
-The app works fully offline with local DataStore + sample data.
-
-To enable Firebase Auth:
-
-1. Create a Firebase project and add an Android app with package `com.adoptme.app`.
-2. Download `google-services.json` into `AdoptMe/app/`.
-3. Sync Gradle — the Google Services plugin applies automatically when the file is present.
-
-## Package structure
-
+```bat
+gradlew.bat assembleDebug
 ```
-com.adoptme.app
-├── data/model
-├── data/local
-├── data/repository
-├── di
-├── ui/theme
-├── ui/components
-├── ui/navigation
-├── ui/screens/*
-└── viewmodel
-```
+
+На macOS и Linux используйте `./gradlew assembleDebug`.
+
+## Что умеет приложение
+
+- Приветствие, регистрация и вход без сервера.
+- Список животных на главной, карточка с фото и описанием.
+- Поиск кошек и собак, фильтры по полу, возрасту и породе.
+- Избранное: добавить и убрать.
+- Заявка на усыновление и история заявок.
+- Редактирование профиля и выход.
+- Данные живут после перезапуска: профиль, избранное и заявки в Room, id сессии в DataStore.
+
+Пароль не сохраняется открытым текстом. Перед записью он превращается в PBKDF2-HMAC-SHA256 с отдельной солью.
+
+## Как проверить сценарий
+
+1. На приветствии нажмите «Создать аккаунт», укажите имя, email и пароль от 6 символов.
+2. На главной откройте карточку, добавьте животное в избранное и отправьте заявку.
+3. Откройте «Избранное» и «Заявки».
+4. В профиле измените имя и город, затем полностью закройте приложение и откройте снова: сессия, избранное, заявка и профиль на месте.
+5. Выйдите и попробуйте войти с неверным паролем — вход не выполнится. С верным паролем данные того же аккаунта вернутся.
+
+Повторная заявка на то же животное, пока первая в статусе «На рассмотрении», не создаётся.
+
+## Если понадобится настоящая регистрация
+
+Локальный режим подходит для демонстрации на устройстве. Для реальных пользователей нужен сервер:
+
+- пароль передаётся только по HTTPS и хешируется на сервере (Argon2id или bcrypt);
+- приложение хранит короткоживущий токен, а не пароль и не серверный хеш;
+- Room остаётся кэшем анкет, избранного и заявок.
+
+Firebase Auth или собственный API с этим контрактом подключаются вместо `AuthRepository`, не меняя экраны.
