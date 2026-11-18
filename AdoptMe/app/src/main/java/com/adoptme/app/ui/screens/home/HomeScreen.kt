@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -53,9 +54,11 @@ fun HomeScreen(
     onOpenAnimal: (String) -> Unit,
     onSeeAll: () -> Unit,
     onNotifications: () -> Unit,
-    onLostFound: () -> Unit,
+    onFavorites: () -> Unit,
+    onMatchQuiz: () -> Unit,
     onHelp: () -> Unit,
-    onVeterinary: () -> Unit
+    onVolunteer: () -> Unit,
+    onShelters: () -> Unit
 ) {
     val container = LocalAppContainer.current
     val vm: HomeViewModel = viewModel(factory = AdoptMeViewModelFactory(container))
@@ -89,6 +92,9 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                    IconButton(onClick = onFavorites) {
+                        Icon(Icons.Outlined.FavoriteBorder, contentDescription = "Избранное", tint = OnGradient)
+                    }
                     IconButton(onClick = onNotifications) {
                         Icon(Icons.Outlined.Notifications, contentDescription = "Уведомления", tint = OnGradient)
                     }
@@ -112,14 +118,14 @@ fun HomeScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    QuickActionCard("Потеряшки", "Объявления рядом", Modifier.weight(1f), onLostFound)
+                    QuickActionCard("Подобрать питомца", "Тест по характеру", Modifier.weight(1f), onMatchQuiz)
                     QuickActionCard("Помощь", "Корм и лечение", Modifier.weight(1f), onHelp)
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    QuickActionCard("Ветеринар", "Клиники и советы", Modifier.weight(1f), onVeterinary)
-                    QuickActionCard("Поиск", "Фильтры и породы", Modifier.weight(1f), onSeeAll)
+                    QuickActionCard("Волонтёрство", "Помощь приютам", Modifier.weight(1f), onVolunteer)
+                    QuickActionCard("Приюты", "Приюты Казахстана", Modifier.weight(1f), onShelters)
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {

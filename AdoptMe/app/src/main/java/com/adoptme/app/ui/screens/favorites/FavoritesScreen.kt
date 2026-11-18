@@ -27,7 +27,8 @@ import com.adoptme.app.viewmodel.FavoritesViewModel
 @Composable
 fun FavoritesScreen(
     onOpenAnimal: (String) -> Unit,
-    onBrowse: () -> Unit
+    onBrowse: () -> Unit,
+    onBack: () -> Unit
 ) {
     val container = LocalAppContainer.current
     val vm: FavoritesViewModel = viewModel(factory = AdoptMeViewModelFactory(container))
@@ -35,7 +36,7 @@ fun FavoritesScreen(
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = "Избранное")
+            ScreenHeader(title = "Избранное", onBack = onBack)
             when {
                 state.loading -> CircularProgressIndicator(color = White, modifier = Modifier.padding(24.dp))
                 state.animals.isEmpty() -> EmptyState(

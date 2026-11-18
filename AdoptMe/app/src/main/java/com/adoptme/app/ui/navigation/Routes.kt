@@ -10,6 +10,7 @@ sealed class Route(val path: String) {
     data object Home : Route("home")
     data object Search : Route("search")
     data object Favorites : Route("favorites")
+    data object Chats : Route("chats")
     data object Applications : Route("applications")
     data object Profile : Route("profile")
     data object Notifications : Route("notifications")
@@ -24,6 +25,8 @@ sealed class Route(val path: String) {
         fun create(animalId: String, animalName: String) = "apply/$animalId/$animalName"
     }
     data object AddPet : Route("add_pet")
+    data object MatchQuiz : Route("match_quiz")
+    data object AiChat : Route("ai_chat")
     data object Chat : Route("chat/{participantId}/{participantType}") {
         fun create(participantId: String, participantType: String) =
             "chat/${Uri.encode(participantId)}/${Uri.encode(participantType)}"
@@ -43,7 +46,7 @@ sealed class Route(val path: String) {
 val bottomBarRoutes = listOf(
     Route.Home.path,
     Route.Search.path,
-    Route.Favorites.path,
+    Route.Chats.path,
     Route.Applications.path,
     Route.Profile.path
 )

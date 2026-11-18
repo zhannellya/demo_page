@@ -6,7 +6,8 @@ enum class HealthStatus { HEALTHY, NEEDS_CARE, RECOVERING }
 enum class ApplicationStatus { PENDING, UNDER_REVIEW, APPROVED, REJECTED }
 enum class LostFoundType { LOST, FOUND }
 enum class OwnerType { PRIVATE, SHELTER }
-enum class ChatParticipantType { PRIVATE, SHELTER }
+enum class ChatParticipantType { PRIVATE, PRIVATE_OWNER, SHELTER, AI }
+enum class ChatSenderType { USER, PARTICIPANT, AI }
 enum class DonationStatus { TEST_SUCCESS, TEST_PENDING, TEST_FAILED }
 enum class PaymentMethod { BANK_CARD }
 
@@ -132,7 +133,12 @@ data class ChatConversation(
     val participantId: String,
     val participantType: ChatParticipantType,
     val participantName: String,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val avatarUri: String = "",
+    val lastMessage: String = "",
+    val lastMessageAt: Long = updatedAt,
+    val unreadCount: Int = 0,
+    val pinned: Boolean = false
 )
 
 data class ChatMessage(
@@ -140,8 +146,26 @@ data class ChatMessage(
     val conversationId: String,
     val text: String,
     val isFromCurrentUser: Boolean,
-    val sentAt: Long
+    val sentAt: Long,
+    val senderType: ChatSenderType = if (isFromCurrentUser) ChatSenderType.USER else ChatSenderType.PARTICIPANT,
+    val isRead: Boolean = true
 )
+
+data class ChatContact(
+    val participantId: String,
+    val participantType: ChatParticipantType,
+    val name: String,
+    val subtitle: String = "",
+    val avatarUri: String = ""
+)
+
+object AdoptMeAiChat {
+    const val PARTICIPANT_ID = "adoptme_ai"
+    const val NAME = "ИИ-помощник ADOPTME"
+    const val SUBTITLE = "Спросите об уходе за питомцем"
+    const val GREETING =
+        "Здравствуйте! Я ИИ-помощник ADOPTME. Спросите меня об уходе, питании, поведении или здоровье питомца"
+}
 
 data class Donation(
     val id: String,
@@ -244,9 +268,25 @@ fun Animal.chatParticipantId(): String = when (ownerType) {
     }
 }
 
+fun ChatParticipantType.canonical(): ChatParticipantType = when (this) {
+    ChatParticipantType.PRIVATE -> ChatParticipantType.PRIVATE_OWNER
+    else -> this
+}
+
+fun parseChatParticipantType(raw: String?): ChatParticipantType {
+    val value = raw.orEmpty()
+    return runCatching { ChatParticipantType.valueOf(value).canonical() }
+        .getOrElse {
+            when (value) {
+                "PRIVATE" -> ChatParticipantType.PRIVATE_OWNER
+                else -> ChatParticipantType.SHELTER
+            }
+        }
+}
+
 fun Animal.chatParticipantType(): ChatParticipantType = when (ownerType) {
     OwnerType.SHELTER -> ChatParticipantType.SHELTER
-    OwnerType.PRIVATE -> ChatParticipantType.PRIVATE
+    OwnerType.PRIVATE -> ChatParticipantType.PRIVATE_OWNER
 }
 
 fun Animal.chatParticipantName(): String = when (ownerType) {
