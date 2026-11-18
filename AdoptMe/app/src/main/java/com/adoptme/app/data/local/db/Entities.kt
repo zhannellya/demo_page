@@ -36,7 +36,70 @@ data class AnimalEntity(
     val size: String,
     val vaccinated: Boolean,
     val sterilized: Boolean,
-    val goodWithKids: Boolean
+    val goodWithKids: Boolean,
+    val city: String = "",
+    val ownerType: String = "SHELTER",
+    val ownerName: String = "",
+    val ownerPhone: String = "",
+    val shelterId: String? = null,
+    val isUserCreated: Boolean = false
+)
+
+@Entity(tableName = "shelters")
+data class ShelterEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val city: String,
+    val address: String,
+    val phone: String,
+    val workingHours: String,
+    val description: String,
+    val logoUri: String,
+    val bankDetails: String,
+    val latitude: Double,
+    val longitude: Double
+)
+
+@Entity(
+    tableName = "chat_conversations",
+    indices = [Index(value = ["participantId", "participantType"], unique = true)]
+)
+data class ChatConversationEntity(
+    @PrimaryKey val id: String,
+    val participantId: String,
+    val participantType: String,
+    val participantName: String,
+    val updatedAt: Long
+)
+
+@Entity(
+    tableName = "chat_messages",
+    foreignKeys = [
+        ForeignKey(
+            entity = ChatConversationEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["conversationId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("conversationId")]
+)
+data class ChatMessageEntity(
+    @PrimaryKey val id: String,
+    val conversationId: String,
+    val text: String,
+    val isFromCurrentUser: Boolean,
+    val sentAt: Long
+)
+
+@Entity(tableName = "donations")
+data class DonationEntity(
+    @PrimaryKey val id: String,
+    val shelterId: String,
+    val purpose: String,
+    val amountKzt: Int,
+    val createdAt: Long,
+    val status: String
 )
 
 @Entity(

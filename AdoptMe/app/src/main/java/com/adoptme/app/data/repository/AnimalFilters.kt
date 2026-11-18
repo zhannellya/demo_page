@@ -11,6 +11,7 @@ fun List<Animal>.applyFilter(filter: AnimalFilter): List<Animal> {
             animal.name.contains(query, ignoreCase = true) ||
             animal.breed.contains(query, ignoreCase = true) ||
             animal.location.contains(query, ignoreCase = true) ||
+            animal.city.contains(query, ignoreCase = true) ||
             animal.description.contains(query, ignoreCase = true)
         val matchesType = filter.type == null || animal.type == filter.type
         val matchesGender = filter.gender == null || animal.gender == filter.gender

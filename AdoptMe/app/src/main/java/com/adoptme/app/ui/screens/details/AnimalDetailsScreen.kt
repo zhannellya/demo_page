@@ -25,23 +25,31 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.adoptme.app.R
+import com.adoptme.app.data.model.ChatParticipantType
+import com.adoptme.app.data.model.OwnerType
+import com.adoptme.app.data.model.chatParticipantId
+import com.adoptme.app.data.model.chatParticipantName
+import com.adoptme.app.data.model.chatParticipantType
 import com.adoptme.app.data.model.titleRu
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.EmptyState
 import com.adoptme.app.ui.components.GradientButton
 import com.adoptme.app.ui.components.HealthBadge
 import com.adoptme.app.ui.components.ScreenHeader
+import com.adoptme.app.ui.components.SecondaryButton
 import com.adoptme.app.ui.components.SoftBackground
 import com.adoptme.app.ui.theme.LilacCard
 import com.adoptme.app.ui.theme.Mauve
@@ -50,6 +58,7 @@ import com.adoptme.app.ui.theme.Plum
 import com.adoptme.app.ui.theme.TextMuted
 import com.adoptme.app.ui.theme.TextSecondary
 import com.adoptme.app.ui.theme.White
+import com.adoptme.app.ui.util.dialPhone
 import com.adoptme.app.viewmodel.AdoptMeViewModelFactory
 import com.adoptme.app.viewmodel.DetailsViewModel
 
@@ -57,7 +66,9 @@ import com.adoptme.app.viewmodel.DetailsViewModel
 fun AnimalDetailsScreen(
     animalId: String,
     onBack: () -> Unit,
-    onAdopt: (String, String) -> Unit
+    onAdopt: (String, String) -> Unit,
+    onOpenShelter: (String) -> Unit,
+    onChat: (participantId: String, type: ChatParticipantType, name: String) -> Unit
 ) {
     val container = LocalAppContainer.current
     val vm: DetailsViewModel = viewModel(
@@ -65,6 +76,7 @@ fun AnimalDetailsScreen(
         factory = AdoptMeViewModelFactory(container, animalId = animalId)
     )
     val state by vm.ui.collectAsState()
+    val context = LocalContext.current
 
     SoftBackground {
         when {
@@ -141,6 +153,7 @@ fun AnimalDetailsScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             InfoRow("Пол", pet.gender.titleRu())
                             InfoRow("Размер", pet.size)
+                            if (pet.city.isNotBlank()) InfoRow("Город", pet.city)
                             InfoRow("Приют", pet.location)
                             InfoRow("Привит", if (pet.vaccinated) "Да" else "Нет")
                             InfoRow("Стерилизован", if (pet.sterilized) "Да" else "Нет")
@@ -149,6 +162,51 @@ fun AnimalDetailsScreen(
                             Text("О питомце", style = MaterialTheme.typography.titleMedium, color = Plum)
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(pet.description, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        val shelter = state.shelter
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(10.dp, RoundedCornerShape(28.dp))
+                                .clip(RoundedCornerShape(28.dp))
+                                .background(LilacCard)
+                                .padding(20.dp)
+                        ) {
+                            Text("Чтобы связаться", style = MaterialTheme.typography.titleLarge, color = Plum)
+                            Spacer(Modifier.height(10.dp))
+                            if (pet.ownerType == OwnerType.SHELTER || shelter != null) {
+                                val title = shelter?.name ?: pet.ownerName.ifBlank { pet.location }
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Plum,
+                                    modifier = Modifier.clickable(enabled = shelter != null) {
+                                        shelter?.id?.let(onOpenShelter)
+                                    }
+                                )
+                                if (shelter != null) {
+                                    Text(shelter.address, color = TextSecondary)
+                                    Text(shelter.phone, style = MaterialTheme.typography.titleSmall)
+                                } else if (pet.ownerPhone.isNotBlank()) {
+                                    Text(pet.ownerPhone, style = MaterialTheme.typography.titleSmall)
+                                }
+                            } else {
+                                if (pet.ownerName.isNotBlank()) {
+                                    Text(pet.ownerName, style = MaterialTheme.typography.titleMedium, color = Plum)
+                                }
+                                Text(pet.ownerPhone, style = MaterialTheme.typography.titleSmall)
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            val phone = shelter?.phone?.takeIf { it.isNotBlank() } ?: pet.ownerPhone
+                            GradientButton("Позвонить", onClick = { context.dialPhone(phone) })
+                            Spacer(Modifier.height(10.dp))
+                            SecondaryButton(
+                                text = "Написать",
+                                onClick = {
+                                    onChat(pet.chatParticipantId(), pet.chatParticipantType(), pet.chatParticipantName())
+                                }
+                            )
                         }
                         Spacer(modifier = Modifier.height(24.dp))
                     }

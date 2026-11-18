@@ -37,14 +37,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.adoptme.app.data.model.ChatParticipantType
+import com.adoptme.app.ui.screens.addpet.AddPetScreen
 import com.adoptme.app.ui.screens.application.AdoptionApplicationScreen
 import com.adoptme.app.ui.screens.applications.ApplicationsScreen
 import com.adoptme.app.ui.screens.auth.LoginScreen
 import com.adoptme.app.ui.screens.auth.RegisterScreen
+import com.adoptme.app.ui.screens.chat.ChatScreen
 import com.adoptme.app.ui.screens.details.AnimalDetailsScreen
 import com.adoptme.app.ui.screens.favorites.FavoritesScreen
+import com.adoptme.app.ui.screens.help.DonationPaymentScreen
 import com.adoptme.app.ui.screens.help.HelpDonateScreen
 import com.adoptme.app.ui.screens.home.HomeScreen
+import com.adoptme.app.ui.screens.shelter.ShelterAnimalsScreen
+import com.adoptme.app.ui.screens.shelter.ShelterDetailScreen
 import com.adoptme.app.ui.screens.lostfound.LostFoundScreen
 import com.adoptme.app.ui.screens.map.MapScreen
 import com.adoptme.app.ui.screens.notifications.NotificationsScreen
@@ -198,10 +204,16 @@ fun AdoptMeNavHost() {
             composable(Route.Applications.path) {
                 ApplicationsScreen(
                     onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) },
-                    onBrowse = { navController.openTab(Route.Search.path) }
+                    onBrowse = { navController.openTab(Route.Search.path) },
+                    onAddPet = { navController.navigate(Route.AddPet.path) }
                 )
             }
-            composable(Route.Map.path) { MapScreen(onBack = { navController.popBackStack() }) }
+            composable(Route.Map.path) {
+                MapScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenShelter = { navController.navigate(Route.ShelterDetail.create(it)) }
+                )
+            }
             composable(Route.Profile.path) {
                 ProfileScreen(
                     onLogout = {
@@ -227,6 +239,10 @@ fun AdoptMeNavHost() {
                     onBack = { navController.popBackStack() },
                     onAdopt = { animalId, name ->
                         navController.navigate(Route.AdoptionApplication.create(animalId, name))
+                    },
+                    onOpenShelter = { navController.navigate(Route.ShelterDetail.create(it)) },
+                    onChat = { participantId, type, _ ->
+                        navController.navigate(Route.Chat.create(participantId, type.name))
                     }
                 )
             }
@@ -250,7 +266,88 @@ fun AdoptMeNavHost() {
                 LostFoundScreen(onBack = { navController.popBackStack() })
             }
             composable(Route.HelpDonate.path) {
-                HelpDonateScreen(onBack = { navController.popBackStack() })
+                HelpDonateScreen(
+                    onBack = { navController.popBackStack() },
+                    onDonate = { shelterId, purpose, amount ->
+                        navController.navigate(Route.DonationPayment.create(shelterId, purpose, amount))
+                    }
+                )
+            }
+            composable(Route.AddPet.path) {
+                AddPetScreen(
+                    onBack = { navController.popBackStack() },
+                    onPublished = {
+                        navController.navigate(Route.Applications.path) {
+                            popUpTo(Route.Applications.path) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(
+                route = Route.Chat.path,
+                arguments = listOf(
+                    navArgument("participantId") { type = NavType.StringType },
+                    navArgument("participantType") { type = NavType.StringType }
+                )
+            ) { entry ->
+                val participantId = entry.arguments?.getString("participantId").orEmpty()
+                val type = runCatching {
+                    ChatParticipantType.valueOf(entry.arguments?.getString("participantType").orEmpty())
+                }.getOrDefault(ChatParticipantType.SHELTER)
+                ChatScreen(
+                    participantId = participantId,
+                    participantType = type,
+                    participantName = "",
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = Route.DonationPayment.path,
+                arguments = listOf(
+                    navArgument("shelterId") { type = NavType.StringType },
+                    navArgument("purpose") { type = NavType.StringType },
+                    navArgument("amount") { type = NavType.StringType }
+                )
+            ) { entry ->
+                val shelterId = entry.arguments?.getString("shelterId").orEmpty()
+                val purpose = entry.arguments?.getString("purpose").orEmpty()
+                val amount = entry.arguments?.getString("amount")?.toIntOrNull()?.takeIf { it > 0 }
+                DonationPaymentScreen(
+                    shelterId = shelterId,
+                    purpose = purpose,
+                    amount = amount,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = Route.ShelterDetail.path,
+                arguments = listOf(navArgument("shelterId") { type = NavType.StringType })
+            ) { entry ->
+                val shelterId = entry.arguments?.getString("shelterId").orEmpty()
+                ShelterDetailScreen(
+                    shelterId = shelterId,
+                    onBack = { navController.popBackStack() },
+                    onChat = { participantId, type, _ ->
+                        navController.navigate(Route.Chat.create(participantId, type.name))
+                    },
+                    onHelp = { id ->
+                        navController.navigate(Route.DonationPayment.create(id, "shelter_support", 2500))
+                    },
+                    onShelterAnimals = { navController.navigate(Route.ShelterAnimals.create(it)) },
+                    onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) }
+                )
+            }
+            composable(
+                route = Route.ShelterAnimals.path,
+                arguments = listOf(navArgument("shelterId") { type = NavType.StringType })
+            ) { entry ->
+                val shelterId = entry.arguments?.getString("shelterId").orEmpty()
+                ShelterAnimalsScreen(
+                    shelterId = shelterId,
+                    onBack = { navController.popBackStack() },
+                    onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) }
+                )
             }
             composable(Route.Veterinary.path) {
                 VeterinaryScreen(onBack = { navController.popBackStack() })
