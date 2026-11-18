@@ -30,11 +30,44 @@ interface AnimalDao {
     @Query("SELECT * FROM animals ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<AnimalEntity>>
 
+    @Query("SELECT * FROM animals WHERE shelterId = :shelterId ORDER BY name COLLATE NOCASE")
+    fun observeByShelter(shelterId: String): Flow<List<AnimalEntity>>
+
+    @Query("SELECT * FROM animals WHERE id = :id LIMIT 1")
+    fun observeById(id: String): Flow<AnimalEntity?>
+
+    @Query("SELECT * FROM animals WHERE id = :id LIMIT 1")
+    suspend fun findById(id: String): AnimalEntity?
+
     @Query("SELECT COUNT(*) FROM animals")
     suspend fun count(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(animals: List<AnimalEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(animal: AnimalEntity)
+
+    @Query("DELETE FROM animals WHERE id = :id AND isUserCreated = 1")
+    suspend fun deleteUserCreated(id: String): Int
+}
+
+@Dao
+interface ShelterDao {
+    @Query("SELECT * FROM shelters ORDER BY city COLLATE NOCASE, name COLLATE NOCASE")
+    fun observeAll(): Flow<List<ShelterEntity>>
+
+    @Query("SELECT * FROM shelters WHERE id = :id LIMIT 1")
+    fun observeById(id: String): Flow<ShelterEntity?>
+
+    @Query("SELECT * FROM shelters WHERE id = :id LIMIT 1")
+    suspend fun findById(id: String): ShelterEntity?
+
+    @Query("SELECT COUNT(*) FROM shelters")
+    suspend fun count(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(shelters: List<ShelterEntity>)
 }
 
 @Dao
@@ -64,4 +97,48 @@ interface ApplicationDao {
         "SELECT COUNT(*) FROM applications WHERE userId = :userId AND animalId = :animalId AND status = 'PENDING'"
     )
     suspend fun pendingCount(userId: Long, animalId: String): Int
+
+    @Query("SELECT * FROM applications WHERE id = :id LIMIT 1")
+    suspend fun findById(id: String): ApplicationEntity?
+
+    @Query("DELETE FROM applications WHERE id = :id")
+    suspend fun deleteById(id: String)
+}
+
+@Dao
+interface ChatDao {
+    @Query("SELECT * FROM chat_conversations ORDER BY updatedAt DESC")
+    fun observeConversations(): Flow<List<ChatConversationEntity>>
+
+    @Query("SELECT * FROM chat_conversations WHERE id = :id LIMIT 1")
+    fun observeConversation(id: String): Flow<ChatConversationEntity?>
+
+    @Query("SELECT * FROM chat_conversations WHERE id = :id LIMIT 1")
+    suspend fun findConversationById(id: String): ChatConversationEntity?
+
+    @Query(
+        "SELECT * FROM chat_conversations WHERE participantId = :participantId AND participantType = :participantType LIMIT 1"
+    )
+    suspend fun findConversation(participantId: String, participantType: String): ChatConversationEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertConversation(conversation: ChatConversationEntity)
+
+    @Query("UPDATE chat_conversations SET updatedAt = :updatedAt, participantName = :participantName WHERE id = :id")
+    suspend fun touchConversation(id: String, participantName: String, updatedAt: Long)
+
+    @Query("SELECT * FROM chat_messages WHERE conversationId = :conversationId ORDER BY sentAt ASC")
+    fun observeMessages(conversationId: String): Flow<List<ChatMessageEntity>>
+
+    @Insert
+    suspend fun insertMessage(message: ChatMessageEntity)
+}
+
+@Dao
+interface DonationDao {
+    @Query("SELECT * FROM donations ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<DonationEntity>>
+
+    @Insert
+    suspend fun insert(donation: DonationEntity)
 }

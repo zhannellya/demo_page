@@ -197,16 +197,22 @@ class FavoritesViewModel(private val animalRepository: AnimalRepository) : ViewM
 
 data class DetailsUiState(
     val loading: Boolean = true,
-    val animal: Animal? = null
+    val animal: Animal? = null,
+    val shelter: Shelter? = null
 )
 
 class DetailsViewModel(
     private val animalRepository: AnimalRepository,
     private val animalId: String
 ) : ViewModel() {
-    val ui: StateFlow<DetailsUiState> = animalRepository.observeAnimals()
-        .map { list -> DetailsUiState(loading = false, animal = list.find { it.id == animalId }) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailsUiState())
+    val ui: StateFlow<DetailsUiState> = combine(
+        animalRepository.observeAnimals(),
+        animalRepository.observeShelters()
+    ) { animals, shelters ->
+        val animal = animals.find { it.id == animalId }
+        val shelter = animal?.shelterId?.let { id -> shelters.find { it.id == id } }
+        DetailsUiState(loading = false, animal = animal, shelter = shelter)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DetailsUiState())
 
     fun toggleFavorite() = viewModelScope.launch { animalRepository.toggleFavorite(animalId) }
 }
@@ -366,10 +372,14 @@ class ProfileViewModel(
     }
 }
 
-class ApplicationsViewModel(animalRepository: AnimalRepository) : ViewModel() {
+class ApplicationsViewModel(private val animalRepository: AnimalRepository) : ViewModel() {
     val ui: StateFlow<ApplicationsUiState> = animalRepository.applications()
         .map { ApplicationsUiState(loading = false, items = it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ApplicationsUiState())
+
+    fun delete(applicationId: String) = viewModelScope.launch {
+        animalRepository.deleteApplication(applicationId)
+    }
 }
 
 class NotificationsViewModel(private val animalRepository: AnimalRepository) : ViewModel() {
@@ -379,10 +389,17 @@ class NotificationsViewModel(private val animalRepository: AnimalRepository) : V
     fun markRead(id: String) = animalRepository.markNotificationRead(id)
 }
 
-class ContentViewModel(animalRepository: AnimalRepository) : ViewModel() {
-    val shelters: List<Shelter> = animalRepository.shelters()
+class ContentViewModel(
+    animalRepository: AnimalRepository,
+    donationRepository: com.adoptme.app.data.repository.DonationRepository
+) : ViewModel() {
+    val shelters: StateFlow<List<Shelter>> = animalRepository.observeShelters()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val clinics: List<Clinic> = animalRepository.clinics()
     val donations: List<DonationOption> = animalRepository.donations()
+    val donationHistory: StateFlow<List<com.adoptme.app.data.model.Donation>> =
+        donationRepository.observeHistory()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val lostFound: StateFlow<List<LostFoundPost>> = animalRepository.lostFound()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
@@ -395,7 +412,12 @@ class SplashViewModel(private val authRepository: AuthRepository) : ViewModel() 
 class AdoptMeViewModelFactory(
     private val container: AppContainer,
     private val animalId: String? = null,
-    private val animalName: String? = null
+    private val animalName: String? = null,
+    private val shelterId: String? = null,
+    private val participantId: String? = null,
+    private val participantType: String? = null,
+    private val donationPurpose: String? = null,
+    private val donationAmount: Int? = null
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
@@ -423,9 +445,32 @@ class AdoptMeViewModelFactory(
             modelClass.isAssignableFrom(NotificationsViewModel::class.java) ->
                 NotificationsViewModel(container.animalRepository) as T
             modelClass.isAssignableFrom(ContentViewModel::class.java) ->
-                ContentViewModel(container.animalRepository) as T
+                ContentViewModel(container.animalRepository, container.donationRepository) as T
             modelClass.isAssignableFrom(SplashViewModel::class.java) ->
                 SplashViewModel(container.authRepository) as T
+            modelClass.isAssignableFrom(AddPetViewModel::class.java) ->
+                AddPetViewModel(container.animalRepository, container.authRepository, container.petPhotoStore) as T
+            modelClass.isAssignableFrom(ChatViewModel::class.java) ->
+                ChatViewModel(
+                    container.chatRepository,
+                    participantId.orEmpty(),
+                    runCatching {
+                        com.adoptme.app.data.model.ChatParticipantType.valueOf(participantType.orEmpty())
+                    }.getOrDefault(com.adoptme.app.data.model.ChatParticipantType.SHELTER),
+                    animalName.orEmpty()
+                ) as T
+            modelClass.isAssignableFrom(DonationPaymentViewModel::class.java) ->
+                DonationPaymentViewModel(
+                    container.animalRepository,
+                    container.donationRepository,
+                    shelterId.orEmpty(),
+                    donationPurpose.orEmpty(),
+                    donationAmount
+                ) as T
+            modelClass.isAssignableFrom(ShelterDetailViewModel::class.java) ->
+                ShelterDetailViewModel(container.animalRepository, shelterId.orEmpty()) as T
+            modelClass.isAssignableFrom(ShelterAnimalsViewModel::class.java) ->
+                ShelterAnimalsViewModel(container.animalRepository, shelterId.orEmpty()) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
         }
     }

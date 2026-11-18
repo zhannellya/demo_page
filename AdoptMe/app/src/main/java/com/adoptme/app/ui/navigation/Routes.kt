@@ -1,5 +1,7 @@
 package com.adoptme.app.ui.navigation
 
+import android.net.Uri
+
 sealed class Route(val path: String) {
     data object Splash : Route("splash")
     data object Welcome : Route("welcome")
@@ -20,6 +22,21 @@ sealed class Route(val path: String) {
     }
     data object AdoptionApplication : Route("apply/{animalId}/{animalName}") {
         fun create(animalId: String, animalName: String) = "apply/$animalId/$animalName"
+    }
+    data object AddPet : Route("add_pet")
+    data object Chat : Route("chat/{participantId}/{participantType}") {
+        fun create(participantId: String, participantType: String) =
+            "chat/${Uri.encode(participantId)}/${Uri.encode(participantType)}"
+    }
+    data object DonationPayment : Route("donation_payment/{shelterId}/{purpose}/{amount}") {
+        fun create(shelterId: String, purpose: String, amount: Int?) =
+            "donation_payment/${Uri.encode(shelterId.ifBlank { "s1" })}/${Uri.encode(purpose.ifBlank { "custom" })}/${amount ?: 0}"
+    }
+    data object ShelterDetail : Route("shelter_detail/{shelterId}") {
+        fun create(shelterId: String) = "shelter_detail/${Uri.encode(shelterId)}"
+    }
+    data object ShelterAnimals : Route("shelter_animals/{shelterId}") {
+        fun create(shelterId: String) = "shelter_animals/${Uri.encode(shelterId)}"
     }
 }
 

@@ -4,8 +4,15 @@ import com.adoptme.app.data.model.AdoptionApplication
 import com.adoptme.app.data.model.Animal
 import com.adoptme.app.data.model.AnimalType
 import com.adoptme.app.data.model.ApplicationStatus
+import com.adoptme.app.data.model.ChatConversation
+import com.adoptme.app.data.model.ChatMessage
+import com.adoptme.app.data.model.ChatParticipantType
+import com.adoptme.app.data.model.Donation
+import com.adoptme.app.data.model.DonationStatus
 import com.adoptme.app.data.model.Gender
 import com.adoptme.app.data.model.HealthStatus
+import com.adoptme.app.data.model.OwnerType
+import com.adoptme.app.data.model.Shelter
 import com.adoptme.app.data.model.UserProfile
 
 fun UserEntity.toProfile(): UserProfile = UserProfile(
@@ -19,12 +26,12 @@ fun UserEntity.toProfile(): UserProfile = UserProfile(
 fun AnimalEntity.toDomain(isFavorite: Boolean): Animal = Animal(
     id = id,
     name = name,
-    type = AnimalType.valueOf(type),
+    type = runCatching { AnimalType.valueOf(type) }.getOrDefault(AnimalType.OTHER),
     breed = breed,
     age = ageLabel,
     ageMonths = ageMonths,
-    gender = Gender.valueOf(gender),
-    healthStatus = HealthStatus.valueOf(healthStatus),
+    gender = runCatching { Gender.valueOf(gender) }.getOrDefault(Gender.FEMALE),
+    healthStatus = runCatching { HealthStatus.valueOf(healthStatus) }.getOrDefault(HealthStatus.HEALTHY),
     description = description,
     imageUrl = imageUrl,
     location = location,
@@ -32,7 +39,53 @@ fun AnimalEntity.toDomain(isFavorite: Boolean): Animal = Animal(
     vaccinated = vaccinated,
     sterilized = sterilized,
     goodWithKids = goodWithKids,
-    isFavorite = isFavorite
+    isFavorite = isFavorite,
+    city = city,
+    ownerType = runCatching { OwnerType.valueOf(ownerType) }.getOrDefault(OwnerType.SHELTER),
+    ownerName = ownerName,
+    ownerPhone = ownerPhone,
+    shelterId = shelterId,
+    isUserCreated = isUserCreated
+)
+
+fun ShelterEntity.toDomain(): Shelter = Shelter(
+    id = id,
+    name = name,
+    address = address,
+    phone = phone,
+    latitude = latitude,
+    longitude = longitude,
+    openHours = workingHours,
+    city = city,
+    description = description,
+    logoUri = logoUri,
+    bankDetails = bankDetails
+)
+
+fun ChatConversationEntity.toDomain(): ChatConversation = ChatConversation(
+    id = id,
+    participantId = participantId,
+    participantType = runCatching { ChatParticipantType.valueOf(participantType) }
+        .getOrDefault(ChatParticipantType.SHELTER),
+    participantName = participantName,
+    updatedAt = updatedAt
+)
+
+fun ChatMessageEntity.toDomain(): ChatMessage = ChatMessage(
+    id = id,
+    conversationId = conversationId,
+    text = text,
+    isFromCurrentUser = isFromCurrentUser,
+    sentAt = sentAt
+)
+
+fun DonationEntity.toDomain(): Donation = Donation(
+    id = id,
+    shelterId = shelterId,
+    purpose = purpose,
+    amountKzt = amountKzt,
+    createdAt = createdAt,
+    status = runCatching { DonationStatus.valueOf(status) }.getOrDefault(DonationStatus.TEST_SUCCESS)
 )
 
 fun ApplicationEntity.toDomain(): AdoptionApplication = AdoptionApplication(

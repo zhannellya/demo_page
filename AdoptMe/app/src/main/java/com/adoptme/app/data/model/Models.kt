@@ -5,6 +5,10 @@ enum class Gender { MALE, FEMALE }
 enum class HealthStatus { HEALTHY, NEEDS_CARE, RECOVERING }
 enum class ApplicationStatus { PENDING, UNDER_REVIEW, APPROVED, REJECTED }
 enum class LostFoundType { LOST, FOUND }
+enum class OwnerType { PRIVATE, SHELTER }
+enum class ChatParticipantType { PRIVATE, SHELTER }
+enum class DonationStatus { TEST_SUCCESS, TEST_PENDING, TEST_FAILED }
+enum class PaymentMethod { BANK_CARD }
 
 enum class AgeGroup(val title: String) {
     UNDER_ONE("До 1 года"),
@@ -42,7 +46,13 @@ data class Animal(
     val vaccinated: Boolean = true,
     val sterilized: Boolean = true,
     val goodWithKids: Boolean = true,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val city: String = "",
+    val ownerType: OwnerType = OwnerType.SHELTER,
+    val ownerName: String = "",
+    val ownerPhone: String = "",
+    val shelterId: String? = null,
+    val isUserCreated: Boolean = false
 )
 
 data class UserProfile(
@@ -89,8 +99,14 @@ data class Shelter(
     val phone: String,
     val latitude: Double,
     val longitude: Double,
-    val openHours: String
-)
+    val openHours: String,
+    val city: String = "",
+    val description: String = "",
+    val logoUri: String = "",
+    val bankDetails: String = ""
+) {
+    val workingHours: String get() = openHours
+}
 
 data class Clinic(
     val id: String,
@@ -106,8 +122,55 @@ data class DonationOption(
     val title: String,
     val description: String,
     val amountLabel: String,
-    val icon: String
+    val icon: String,
+    val amountKzt: Int? = null,
+    val purposeKey: String = icon
 )
+
+data class ChatConversation(
+    val id: String,
+    val participantId: String,
+    val participantType: ChatParticipantType,
+    val participantName: String,
+    val updatedAt: Long
+)
+
+data class ChatMessage(
+    val id: String,
+    val conversationId: String,
+    val text: String,
+    val isFromCurrentUser: Boolean,
+    val sentAt: Long
+)
+
+data class Donation(
+    val id: String,
+    val shelterId: String,
+    val purpose: String,
+    val amountKzt: Int,
+    val createdAt: Long,
+    val status: DonationStatus
+)
+
+data class DonationRequest(
+    val shelterId: String,
+    val purpose: String,
+    val amountKzt: Int,
+    val method: PaymentMethod
+)
+
+data class DonationReceipt(
+    val id: String,
+    val shelterId: String,
+    val purpose: String,
+    val amountKzt: Int,
+    val createdAt: Long,
+    val status: DonationStatus
+)
+
+object KazakhstanCities {
+    val featured = listOf("Алматы", "Астана", "Шымкент", "Караганда", "Тараз")
+}
 
 data class AppNotification(
     val id: String,
@@ -151,4 +214,56 @@ fun AnimalType.titleRu(): String = when (this) {
 fun LostFoundType.titleRu(): String = when (this) {
     LostFoundType.LOST -> "Потерялся"
     LostFoundType.FOUND -> "Нашёлся"
+}
+
+fun OwnerType.titleRu(): String = when (this) {
+    OwnerType.PRIVATE -> "Частное лицо"
+    OwnerType.SHELTER -> "Приют"
+}
+
+fun DonationStatus.titleRu(): String = when (this) {
+    DonationStatus.TEST_SUCCESS -> "Тестовый платёж выполнен"
+    DonationStatus.TEST_PENDING -> "Тестовый платёж обрабатывается"
+    DonationStatus.TEST_FAILED -> "Тестовый платёж не выполнен"
+}
+
+fun PaymentMethod.titleRu(): String = when (this) {
+    PaymentMethod.BANK_CARD -> "Банковская карта"
+}
+
+fun formatKzt(amount: Int): String {
+    val grouped = "%,d".format(java.util.Locale.US, amount).replace(',', ' ')
+    return "$grouped ₸"
+}
+
+fun Animal.chatParticipantId(): String = when (ownerType) {
+    OwnerType.SHELTER -> shelterId?.takeIf { it.isNotBlank() } ?: ownerPhone.ifBlank { id }
+    OwnerType.PRIVATE -> {
+        val phone = ownerPhone.filter { it.isDigit() || it == '+' }
+        phone.ifBlank { "private_$id" }
+    }
+}
+
+fun Animal.chatParticipantType(): ChatParticipantType = when (ownerType) {
+    OwnerType.SHELTER -> ChatParticipantType.SHELTER
+    OwnerType.PRIVATE -> ChatParticipantType.PRIVATE
+}
+
+fun Animal.chatParticipantName(): String = when (ownerType) {
+    OwnerType.SHELTER -> ownerName.ifBlank { location }
+    OwnerType.PRIVATE -> ownerName.ifBlank { "Владелец" }
+}
+
+fun parseAgeMonths(age: String): Int {
+    val trimmed = age.trim().lowercase()
+    val years = Regex("""(\d+)\s*(год|года|лет)""").find(trimmed)?.groupValues?.get(1)?.toIntOrNull()
+    val months = Regex("""(\d+)\s*(мес)""").find(trimmed)?.groupValues?.get(1)?.toIntOrNull()
+    val number = trimmed.toIntOrNull()
+    return when {
+        years != null && months != null -> years * 12 + months
+        years != null -> years * 12
+        months != null -> months
+        number != null -> if (number <= 30) number * 12 else number
+        else -> 12
+    }
 }

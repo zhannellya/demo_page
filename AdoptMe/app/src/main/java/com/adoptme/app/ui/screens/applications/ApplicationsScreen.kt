@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,21 +12,31 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.adoptme.app.data.model.AdoptionApplication
 import com.adoptme.app.data.model.ApplicationStatus
 import com.adoptme.app.data.model.titleRu
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.AdoptMeCard
 import com.adoptme.app.ui.components.EmptyState
+import com.adoptme.app.ui.components.GradientButton
 import com.adoptme.app.ui.components.ScreenHeader
 import com.adoptme.app.ui.components.SoftBackground
 import com.adoptme.app.ui.theme.CyanNeon
@@ -44,52 +55,100 @@ import java.util.Locale
 @Composable
 fun ApplicationsScreen(
     onOpenAnimal: (String) -> Unit,
-    onBrowse: () -> Unit
+    onBrowse: () -> Unit,
+    onAddPet: () -> Unit
 ) {
     val container = LocalAppContainer.current
     val vm: ApplicationsViewModel = viewModel(factory = AdoptMeViewModelFactory(container))
     val state by vm.ui.collectAsState()
+    var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    pendingDeleteId?.let { id ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteId = null },
+            title = { Text("Удалить заявку") },
+            text = { Text("Вы действительно хотите удалить заявку?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.delete(id)
+                    pendingDeleteId = null
+                }) { Text("Удалить", color = ErrorRose) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteId = null }) { Text("Отмена") }
+            }
+        )
+    }
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
             ScreenHeader(title = "Мои заявки")
             when {
-                state.loading -> CircularProgressIndicator(color = White, modifier = Modifier.height(48.dp))
-                state.items.isEmpty() -> EmptyState(
-                    title = "Заявок пока нет",
-                    subtitle = "Откройте анкету животного и нажмите «Хочу усыновить».",
-                    actionLabel = "Смотреть животных",
-                    onAction = onBrowse
-                )
+                state.loading -> {
+                    CircularProgressIndicator(color = White, modifier = Modifier.height(48.dp).padding(20.dp))
+                    Spacer(Modifier.weight(1f))
+                }
+                state.items.isEmpty() -> {
+                    EmptyState(
+                        title = "Заявок пока нет",
+                        subtitle = "Откройте анкету животного или добавьте своего питомца.",
+                        actionLabel = "Смотреть животных",
+                        onAction = onBrowse
+                    )
+                    Spacer(Modifier.weight(1f))
+                }
                 else -> LazyColumn(
+                    modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(state.items, key = { it.id }) { application ->
-                        AdoptMeCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenAnimal(application.animalId) }
-                        ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
-                                Text(application.animalName, style = MaterialTheme.typography.titleLarge, color = Plum)
-                                Spacer(Modifier.height(4.dp))
-                                Text(formatSubmittedAt(application.submittedAt), style = MaterialTheme.typography.labelMedium)
-                                Spacer(Modifier.height(6.dp))
-                                Text(application.reason, color = TextSecondary, maxLines = 3)
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    text = application.status.titleRu(),
-                                    color = statusColor(application.status),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = "${application.housingType} · ${application.phone}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
+                        ApplicationCard(
+                            application = application,
+                            onOpen = { onOpenAnimal(application.animalId) },
+                            onDelete = { pendingDeleteId = application.id }
+                        )
                     }
+                }
+            }
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                GradientButton(text = "+ Добавить питомца", onClick = onAddPet)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ApplicationCard(
+    application: AdoptionApplication,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit
+) {
+    AdoptMeCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpen)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(application.animalName, style = MaterialTheme.typography.titleLarge, color = Plum)
+            Spacer(Modifier.height(4.dp))
+            Text(formatSubmittedAt(application.submittedAt), style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(6.dp))
+            Text(application.reason, color = TextSecondary, maxLines = 3)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = application.status.titleRu(),
+                color = statusColor(application.status),
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "${application.housingType} · ${application.phone}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDelete) {
+                    Icon(Icons.Outlined.Delete, contentDescription = null, tint = ErrorRose)
+                    Text("Удалить заявку", color = ErrorRose)
                 }
             }
         }
