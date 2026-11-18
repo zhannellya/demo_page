@@ -1,6 +1,8 @@
 package com.adoptme.app.di
 
 import android.content.Context
+import com.adoptme.app.data.ai.LocalPetAiService
+import com.adoptme.app.data.ai.PetAiService
 import com.adoptme.app.data.local.PetPhotoStore
 import com.adoptme.app.data.local.SessionStore
 import com.adoptme.app.data.local.db.AdoptMeDatabase
@@ -17,6 +19,7 @@ class AppContainer(context: Context) {
     val sessionStore = SessionStore(appContext)
     val petPhotoStore = PetPhotoStore(appContext)
     val paymentService: PaymentService = DemoPaymentService()
+    val petAiService: PetAiService = LocalPetAiService()
     val authRepository = AuthRepository(sessionStore, database.userDao())
     val animalRepository = AnimalRepository(
         sessionStore = sessionStore,
@@ -27,7 +30,9 @@ class AppContainer(context: Context) {
     )
     val chatRepository = ChatRepository(
         chatDao = database.chatDao(),
-        shelterDao = database.shelterDao()
+        shelterDao = database.shelterDao(),
+        animalDao = database.animalDao(),
+        petAiService = petAiService
     )
     val donationRepository = DonationRepository(
         donationDao = database.donationDao(),

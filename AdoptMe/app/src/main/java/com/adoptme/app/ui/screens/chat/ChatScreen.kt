@@ -1,6 +1,7 @@
 package com.adoptme.app.ui.screens.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,13 +12,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,11 +36,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.adoptme.app.R
 import com.adoptme.app.data.model.ChatParticipantType
 import com.adoptme.app.di.LocalAppContainer
 import com.adoptme.app.ui.components.AdoptTextField
+import com.adoptme.app.ui.components.CategoryChip
 import com.adoptme.app.ui.components.EmptyState
 import com.adoptme.app.ui.components.ScreenHeader
 import com.adoptme.app.ui.components.SoftBackground
@@ -52,11 +63,20 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun ChatScreen(
+fun ConversationScreen(
     participantId: String,
     participantType: ChatParticipantType,
     participantName: String,
     onBack: () -> Unit
+) = ChatScreen(participantId, participantType, participantName, onBack)
+
+@Composable
+fun ChatScreen(
+    participantId: String,
+    participantType: ChatParticipantType,
+    participantName: String,
+    onBack: () -> Unit,
+    quickPrompts: List<String> = emptyList()
 ) {
     val container = LocalAppContainer.current
     val vm: ChatViewModel = viewModel(
@@ -79,7 +99,40 @@ fun ChatScreen(
 
     SoftBackground {
         Column(modifier = Modifier.fillMaxSize()) {
-            ScreenHeader(title = state.title.ifBlank { participantName.ifBlank { "Чат" } }, onBack = onBack)
+            ScreenHeader(
+                title = state.title.ifBlank { participantName.ifBlank { "Чат" } },
+                onBack = onBack,
+                actions = {
+                    when {
+                        participantType == ChatParticipantType.AI -> {
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 12.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(PurpleGradient),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.SmartToy, contentDescription = null, tint = White)
+                            }
+                        }
+                        state.avatarUri.isNotBlank() -> {
+                            AsyncImage(
+                                model = state.avatarUri,
+                                contentDescription = state.title,
+                                placeholder = painterResource(R.drawable.ic_paw),
+                                error = painterResource(R.drawable.ic_paw),
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .padding(end = 12.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                            )
+                        }
+                        else -> Spacer(Modifier.width(8.dp))
+                    }
+                }
+            )
             when {
                 state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = White)
@@ -135,6 +188,20 @@ fun ChatScreen(
                         }
                     }
                     Column(modifier = Modifier.padding(16.dp)) {
+                        if (quickPrompts.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                quickPrompts.forEach { prompt ->
+                                    CategoryChip(prompt, selected = false) {
+                                        vm.setDraft(prompt)
+                                        vm.send()
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                        }
                         state.error?.let {
                             Text(it, color = ErrorRose, style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.height(6.dp))
@@ -147,7 +214,10 @@ fun ChatScreen(
                                     label = "Сообщение"
                                 )
                             }
-                            IconButton(onClick = vm::send, enabled = !state.sending) {
+                            IconButton(
+                                onClick = vm::send,
+                                enabled = !state.sending && state.draft.isNotBlank()
+                            ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.Send,
                                     contentDescription = "Отправить",

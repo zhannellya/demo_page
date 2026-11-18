@@ -54,7 +54,9 @@ fun ProfileScreen(
     onHelp: () -> Unit,
     onLostFound: () -> Unit,
     onVeterinary: () -> Unit,
-    onMap: () -> Unit
+    onMap: () -> Unit,
+    onFavorites: () -> Unit,
+    onChats: () -> Unit
 ) {
     val container = LocalAppContainer.current
     val vm: ProfileViewModel = viewModel(factory = AdoptMeViewModelFactory(container))
@@ -161,6 +163,8 @@ fun ProfileScreen(
                     AdoptMeCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(8.dp)) {
                             ProfileLink("Мои заявки (${applications.items.size})", onApplications)
+                            ProfileLink("Чаты", onChats)
+                            ProfileLink("Избранное", onFavorites)
                             ProfileLink("Уведомления", onNotifications)
                             ProfileLink("Приюты", onMap)
                             ProfileLink("Потеряшки", onLostFound)

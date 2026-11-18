@@ -7,6 +7,8 @@ import com.adoptme.app.data.model.ApplicationStatus
 import com.adoptme.app.data.model.ChatConversation
 import com.adoptme.app.data.model.ChatMessage
 import com.adoptme.app.data.model.ChatParticipantType
+import com.adoptme.app.data.model.ChatSenderType
+import com.adoptme.app.data.model.parseChatParticipantType
 import com.adoptme.app.data.model.Donation
 import com.adoptme.app.data.model.DonationStatus
 import com.adoptme.app.data.model.Gender
@@ -65,19 +67,30 @@ fun ShelterEntity.toDomain(): Shelter = Shelter(
 fun ChatConversationEntity.toDomain(): ChatConversation = ChatConversation(
     id = id,
     participantId = participantId,
-    participantType = runCatching { ChatParticipantType.valueOf(participantType) }
-        .getOrDefault(ChatParticipantType.SHELTER),
+    participantType = parseChatParticipantType(participantType),
     participantName = participantName,
-    updatedAt = updatedAt
+    updatedAt = updatedAt,
+    avatarUri = avatarUri,
+    lastMessage = lastMessage,
+    lastMessageAt = updatedAt,
+    unreadCount = unreadCount,
+    pinned = pinned
 )
 
-fun ChatMessageEntity.toDomain(): ChatMessage = ChatMessage(
-    id = id,
-    conversationId = conversationId,
-    text = text,
-    isFromCurrentUser = isFromCurrentUser,
-    sentAt = sentAt
-)
+fun ChatMessageEntity.toDomain(): ChatMessage {
+    val sender = runCatching { ChatSenderType.valueOf(senderType) }.getOrElse {
+        if (isFromCurrentUser) ChatSenderType.USER else ChatSenderType.PARTICIPANT
+    }
+    return ChatMessage(
+        id = id,
+        conversationId = conversationId,
+        text = text,
+        isFromCurrentUser = sender == ChatSenderType.USER,
+        sentAt = sentAt,
+        senderType = sender,
+        isRead = isRead
+    )
+}
 
 fun DonationEntity.toDomain(): Donation = Donation(
     id = id,

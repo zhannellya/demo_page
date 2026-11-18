@@ -18,7 +18,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ChatMessageEntity::class,
         DonationEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AdoptMeDatabase : RoomDatabase() {
@@ -107,6 +107,23 @@ abstract class AdoptMeDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE chat_conversations ADD COLUMN avatarUri TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE chat_conversations ADD COLUMN lastMessage TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE chat_conversations ADD COLUMN unreadCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE chat_conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE chat_messages ADD COLUMN senderType TEXT NOT NULL DEFAULT 'PARTICIPANT'")
+                db.execSQL("ALTER TABLE chat_messages ADD COLUMN isRead INTEGER NOT NULL DEFAULT 1")
+                db.execSQL(
+                    "UPDATE chat_messages SET senderType = CASE WHEN isFromCurrentUser = 1 THEN 'USER' ELSE 'PARTICIPANT' END"
+                )
+                db.execSQL(
+                    "UPDATE chat_conversations SET participantType = 'PRIVATE_OWNER' WHERE participantType = 'PRIVATE'"
+                )
+            }
+        }
+
         fun create(context: Context): AdoptMeDatabase {
             return instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -114,7 +131,7 @@ abstract class AdoptMeDatabase : RoomDatabase() {
                     AdoptMeDatabase::class.java,
                     "adoptme.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                     .also { instance = it }
             }

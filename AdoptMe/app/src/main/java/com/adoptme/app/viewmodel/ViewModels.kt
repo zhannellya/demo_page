@@ -454,11 +454,13 @@ class AdoptMeViewModelFactory(
                 ChatViewModel(
                     container.chatRepository,
                     participantId.orEmpty(),
-                    runCatching {
-                        com.adoptme.app.data.model.ChatParticipantType.valueOf(participantType.orEmpty())
-                    }.getOrDefault(com.adoptme.app.data.model.ChatParticipantType.SHELTER),
+                    com.adoptme.app.data.model.parseChatParticipantType(participantType),
                     animalName.orEmpty()
                 ) as T
+            modelClass.isAssignableFrom(ChatsViewModel::class.java) ->
+                ChatsViewModel(container.chatRepository) as T
+            modelClass.isAssignableFrom(MatchQuizViewModel::class.java) ->
+                MatchQuizViewModel(container.animalRepository) as T
             modelClass.isAssignableFrom(DonationPaymentViewModel::class.java) ->
                 DonationPaymentViewModel(
                     container.animalRepository,

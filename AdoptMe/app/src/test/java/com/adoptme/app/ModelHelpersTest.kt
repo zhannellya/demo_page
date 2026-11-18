@@ -34,7 +34,7 @@ class ModelHelpersTest {
         val privatePet = sampleAnimal(ownerType = OwnerType.PRIVATE, shelterId = null, ownerPhone = "+77011234567")
         assertEquals(ChatParticipantType.SHELTER, shelterPet.chatParticipantType())
         assertEquals("s5", shelterPet.chatParticipantId())
-        assertEquals(ChatParticipantType.PRIVATE, privatePet.chatParticipantType())
+        assertEquals(ChatParticipantType.PRIVATE_OWNER, privatePet.chatParticipantType())
         assertEquals("+77011234567", privatePet.chatParticipantId())
     }
 

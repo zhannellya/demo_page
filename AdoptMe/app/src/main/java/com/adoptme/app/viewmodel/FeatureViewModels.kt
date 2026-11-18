@@ -10,6 +10,7 @@ import com.adoptme.app.data.model.Animal
 import com.adoptme.app.data.model.AnimalType
 import com.adoptme.app.data.model.ChatMessage
 import com.adoptme.app.data.model.ChatParticipantType
+import com.adoptme.app.data.model.canonical
 import com.adoptme.app.data.model.Donation
 import com.adoptme.app.data.model.DonationRequest
 import com.adoptme.app.data.model.Gender
@@ -154,12 +155,47 @@ class AddPetViewModel(
 data class ChatUiState(
     val loading: Boolean = true,
     val title: String = "",
+    val avatarUri: String = "",
     val conversationId: String = "",
     val messages: List<ChatMessage> = emptyList(),
     val draft: String = "",
     val sending: Boolean = false,
     val error: String? = null
 )
+
+data class ChatsListUiState(
+    val loading: Boolean = true,
+    val conversations: List<com.adoptme.app.data.model.ChatConversation> = emptyList(),
+    val contacts: List<com.adoptme.app.data.model.ChatContact> = emptyList()
+)
+
+class ChatsViewModel(private val chatRepository: ChatRepository) : ViewModel() {
+    private val ready = MutableStateFlow(false)
+
+    val ui: StateFlow<ChatsListUiState> = combine(
+        chatRepository.observeConversations(),
+        chatRepository.observeNewChatContacts(),
+        ready
+    ) { conversations, contacts, isReady ->
+        ChatsListUiState(loading = !isReady, conversations = conversations, contacts = contacts)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChatsListUiState())
+
+    init {
+        viewModelScope.launch {
+            chatRepository.ensureAiConversation()
+            ready.value = true
+        }
+    }
+
+    suspend fun startChat(contact: com.adoptme.app.data.model.ChatContact): com.adoptme.app.data.model.ChatConversation {
+        return chatRepository.getOrCreateConversation(
+            participantId = contact.participantId,
+            participantType = contact.participantType,
+            participantName = contact.name,
+            avatarUri = contact.avatarUri
+        )
+    }
+}
 
 class ChatViewModel(
     private val chatRepository: ChatRepository,
@@ -172,6 +208,7 @@ class ChatViewModel(
     private val sending = MutableStateFlow(false)
     private val error = MutableStateFlow<String?>(null)
     private val title = MutableStateFlow(initialName)
+    private val avatar = MutableStateFlow("")
 
     private val messages = conversationId.flatMapLatest { id ->
         if (id == null) flowOf(emptyList()) else chatRepository.observeMessages(id)
@@ -179,18 +216,20 @@ class ChatViewModel(
 
     val ui: StateFlow<ChatUiState> = combine(
         combine(conversationId, messages, draft) { id, items, text -> Triple(id, items, text) },
-        combine(sending, error, title) { isSending, err, name -> Triple(isSending, err, name) }
+        combine(sending, error, title, avatar) { isSending, err, name, photo ->
+            Quad(isSending, err, name, photo)
+        }
     ) { conv, meta ->
         val (id, items, text) = conv
-        val (isSending, err, name) = meta
         ChatUiState(
             loading = id == null,
-            title = name,
+            title = meta.title,
+            avatarUri = meta.avatar,
             conversationId = id.orEmpty(),
             messages = items,
             draft = text,
-            sending = isSending,
-            error = err
+            sending = meta.sending,
+            error = meta.error
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChatUiState())
 
@@ -199,9 +238,12 @@ class ChatViewModel(
             val name = initialName.ifBlank {
                 chatRepository.resolveParticipantName(participantId, participantType)
             }
+            val photo = chatRepository.resolveAvatar(participantId, participantType)
             title.value = name
-            val conversation = chatRepository.getOrCreateConversation(participantId, participantType, name)
+            avatar.value = photo
+            val conversation = chatRepository.getOrCreateConversation(participantId, participantType, name, photo)
             conversationId.value = conversation.id
+            chatRepository.markRead(conversation.id)
         }
     }
 
@@ -226,11 +268,69 @@ class ChatViewModel(
                 draft.value = ""
                 viewModelScope.launch {
                     delay(650)
-                    chatRepository.addLocalReply(id, participantType)
+                    if (participantType.canonical() == ChatParticipantType.AI) {
+                        chatRepository.sendAiReply(id, text)
+                    } else {
+                        chatRepository.addLocalReply(id, participantType)
+                    }
+                    chatRepository.markRead(id)
                 }
             },
             onFailure = { failure -> error.value = failure.message }
         )
+    }
+}
+
+private data class Quad(
+    val sending: Boolean,
+    val error: String?,
+    val title: String,
+    val avatar: String
+)
+
+data class MatchQuizState(
+    val step: Int = 0,
+    val type: AnimalType? = null,
+    val energetic: Boolean? = null,
+    val hasKids: Boolean? = null,
+    val matches: List<Animal> = emptyList(),
+    val finished: Boolean = false
+)
+
+class MatchQuizViewModel(private val animalRepository: AnimalRepository) : ViewModel() {
+    private val _ui = MutableStateFlow(MatchQuizState())
+    val ui: StateFlow<MatchQuizState> = _ui.asStateFlow()
+
+    fun chooseType(type: AnimalType?) {
+        _ui.update { it.copy(type = type, step = 1) }
+    }
+
+    fun chooseEnergy(energetic: Boolean) {
+        _ui.update { it.copy(energetic = energetic, step = 2) }
+    }
+
+    fun chooseKids(hasKids: Boolean) = viewModelScope.launch {
+        val current = _ui.value.copy(hasKids = hasKids)
+        val animals = animalRepository.observeAnimals().first()
+        val matches = animals.filter { animal ->
+            val typeOk = current.type == null || animal.type == current.type
+            val energyOk = when (current.energetic) {
+                true -> animal.size == "Крупный" || animal.type == AnimalType.DOG
+                false -> animal.size != "Крупный" || animal.type == AnimalType.CAT
+                null -> true
+            }
+            val kidsOk = current.hasKids != true || animal.goodWithKids
+            typeOk && energyOk && kidsOk
+        }
+        _ui.value = current.copy(finished = true, matches = matches.ifEmpty { animals.take(4) })
+    }
+
+    fun toggleFavorite(id: String) = viewModelScope.launch {
+        animalRepository.toggleFavorite(id)
+        val favorites = animalRepository.observeAnimals().first().associateBy { it.id }
+        _ui.update { state ->
+            state.copy(matches = state.matches.map { favorites[it.id] ?: it })
+        }
     }
 }
 

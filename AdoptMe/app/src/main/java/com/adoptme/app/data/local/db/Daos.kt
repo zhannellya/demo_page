@@ -121,14 +121,45 @@ interface ChatDao {
     )
     suspend fun findConversation(participantId: String, participantType: String): ChatConversationEntity?
 
+    @Query(
+        "SELECT * FROM chat_conversations WHERE participantId = :participantId AND participantType IN (:types) LIMIT 1"
+    )
+    suspend fun findConversationAny(participantId: String, types: List<String>): ChatConversationEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConversation(conversation: ChatConversationEntity)
 
-    @Query("UPDATE chat_conversations SET updatedAt = :updatedAt, participantName = :participantName WHERE id = :id")
-    suspend fun touchConversation(id: String, participantName: String, updatedAt: Long)
+    @Query(
+        """
+        UPDATE chat_conversations SET
+            updatedAt = :updatedAt,
+            participantName = :participantName,
+            lastMessage = :lastMessage,
+            unreadCount = :unreadCount,
+            avatarUri = CASE WHEN :avatarUri = '' THEN avatarUri ELSE :avatarUri END
+        WHERE id = :id
+        """
+    )
+    suspend fun updatePreview(
+        id: String,
+        participantName: String,
+        lastMessage: String,
+        updatedAt: Long,
+        unreadCount: Int,
+        avatarUri: String = ""
+    )
+
+    @Query("UPDATE chat_conversations SET unreadCount = 0 WHERE id = :id")
+    suspend fun clearUnread(id: String)
+
+    @Query("UPDATE chat_messages SET isRead = 1 WHERE conversationId = :conversationId")
+    suspend fun markMessagesRead(conversationId: String)
 
     @Query("SELECT * FROM chat_messages WHERE conversationId = :conversationId ORDER BY sentAt ASC")
     fun observeMessages(conversationId: String): Flow<List<ChatMessageEntity>>
+
+    @Query("SELECT COUNT(*) FROM chat_messages WHERE conversationId = :conversationId")
+    suspend fun messageCount(conversationId: String): Int
 
     @Insert
     suspend fun insertMessage(message: ChatMessageEntity)

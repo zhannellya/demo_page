@@ -69,7 +69,11 @@ data class ChatConversationEntity(
     val participantId: String,
     val participantType: String,
     val participantName: String,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val avatarUri: String = "",
+    val lastMessage: String = "",
+    val unreadCount: Int = 0,
+    val pinned: Boolean = false
 )
 
 @Entity(
@@ -89,7 +93,9 @@ data class ChatMessageEntity(
     val conversationId: String,
     val text: String,
     val isFromCurrentUser: Boolean,
-    val sentAt: Long
+    val sentAt: Long,
+    val senderType: String = if (isFromCurrentUser) "USER" else "PARTICIPANT",
+    val isRead: Boolean = true
 )
 
 @Entity(tableName = "donations")

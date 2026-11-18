@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
@@ -37,13 +37,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.adoptme.app.data.model.ChatParticipantType
+import com.adoptme.app.data.model.parseChatParticipantType
 import com.adoptme.app.ui.screens.addpet.AddPetScreen
 import com.adoptme.app.ui.screens.application.AdoptionApplicationScreen
 import com.adoptme.app.ui.screens.applications.ApplicationsScreen
 import com.adoptme.app.ui.screens.auth.LoginScreen
 import com.adoptme.app.ui.screens.auth.RegisterScreen
-import com.adoptme.app.ui.screens.chat.ChatScreen
+import com.adoptme.app.ui.screens.chat.ChatsScreen
+import com.adoptme.app.ui.screens.chat.ConversationScreen
+import com.adoptme.app.ui.screens.chat.PetAiChatScreen
+import com.adoptme.app.ui.screens.match.MatchQuizScreen
 import com.adoptme.app.ui.screens.details.AnimalDetailsScreen
 import com.adoptme.app.ui.screens.favorites.FavoritesScreen
 import com.adoptme.app.ui.screens.help.DonationPaymentScreen
@@ -90,7 +93,7 @@ fun AdoptMeNavHost() {
     val bottomItems = listOf(
         BottomItem(Route.Home.path, "Главная", Icons.Filled.Home, Icons.Outlined.Home),
         BottomItem(Route.Search.path, "Поиск", Icons.Filled.Search, Icons.Outlined.Search),
-        BottomItem(Route.Favorites.path, "Избранное", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
+        BottomItem(Route.Chats.path, "Чаты", Icons.AutoMirrored.Filled.Chat, Icons.AutoMirrored.Outlined.Chat),
         BottomItem(Route.Applications.path, "Заявки", Icons.AutoMirrored.Outlined.Assignment, Icons.AutoMirrored.Outlined.Assignment),
         BottomItem(Route.Profile.path, "Профиль", Icons.Filled.Person, Icons.Outlined.Person)
     )
@@ -187,19 +190,39 @@ fun AdoptMeNavHost() {
                     onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) },
                     onSeeAll = { navController.openTab(Route.Search.path) },
                     onNotifications = { navController.navigate(Route.Notifications.path) },
-                    onLostFound = { navController.navigate(Route.LostFound.path) },
+                    onFavorites = { navController.navigate(Route.Favorites.path) },
+                    onMatchQuiz = { navController.navigate(Route.MatchQuiz.path) },
                     onHelp = { navController.navigate(Route.HelpDonate.path) },
-                    onVeterinary = { navController.navigate(Route.Veterinary.path) }
+                    onVolunteer = { navController.navigate(Route.HelpDonate.path) },
+                    onShelters = { navController.navigate(Route.Map.path) }
                 )
             }
             composable(Route.Search.path) {
                 SearchScreen(onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) })
             }
+            composable(Route.Chats.path) {
+                ChatsScreen(
+                    onOpenConversation = { id, type, name ->
+                        navController.navigate(Route.Chat.create(id, type.name))
+                    },
+                    onOpenAi = { navController.navigate(Route.AiChat.path) }
+                )
+            }
             composable(Route.Favorites.path) {
                 FavoritesScreen(
                     onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) },
-                    onBrowse = { navController.openTab(Route.Search.path) }
+                    onBrowse = { navController.openTab(Route.Search.path) },
+                    onBack = { navController.popBackStack() }
                 )
+            }
+            composable(Route.MatchQuiz.path) {
+                MatchQuizScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenAnimal = { navController.navigate(Route.AnimalDetails.create(it)) }
+                )
+            }
+            composable(Route.AiChat.path) {
+                PetAiChatScreen(onBack = { navController.popBackStack() })
             }
             composable(Route.Applications.path) {
                 ApplicationsScreen(
@@ -226,7 +249,9 @@ fun AdoptMeNavHost() {
                     onHelp = { navController.navigate(Route.HelpDonate.path) },
                     onLostFound = { navController.navigate(Route.LostFound.path) },
                     onVeterinary = { navController.navigate(Route.Veterinary.path) },
-                    onMap = { navController.navigate(Route.Map.path) }
+                    onMap = { navController.navigate(Route.Map.path) },
+                    onFavorites = { navController.navigate(Route.Favorites.path) },
+                    onChats = { navController.openTab(Route.Chats.path) }
                 )
             }
             composable(
@@ -292,10 +317,8 @@ fun AdoptMeNavHost() {
                 )
             ) { entry ->
                 val participantId = entry.arguments?.getString("participantId").orEmpty()
-                val type = runCatching {
-                    ChatParticipantType.valueOf(entry.arguments?.getString("participantType").orEmpty())
-                }.getOrDefault(ChatParticipantType.SHELTER)
-                ChatScreen(
+                val type = parseChatParticipantType(entry.arguments?.getString("participantType"))
+                ConversationScreen(
                     participantId = participantId,
                     participantType = type,
                     participantName = "",
